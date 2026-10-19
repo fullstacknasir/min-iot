@@ -1,0 +1,78 @@
+<div class="space-y-6">
+  <!-- Back Button & Header -->
+  <header class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <button
+        type="button"
+        (click)="navigateBack()"
+        class="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 text-slate-300 transition-colors hover:border-slate-700 hover:bg-slate-800"
+      >
+        <mat-icon class="text-sm">arrow_back</mat-icon>
+      </button>
+
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xl font-bold tracking-tight text-white">{{ device()?.name ?? deviceId() }}</span>
+          <span
+            *ngIf="device()"
+            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider"
+            [class.bg-emerald-500/10]="device()?.status === 'online'"
+            [class.text-emerald-400]="device()?.status === 'online'"
+            [class.border]="true"
+            [class.border-emerald-500/30]="device()?.status === 'online'"
+            [class.bg-slate-700/50]="device()?.status === 'offline'"
+            [class.text-slate-400]="device()?.status === 'offline'"
+            [class.border-slate-600/30]="device()?.status === 'offline'"
+          >
+            {{ device()?.status }}
+          </span>
+        </div>
+        <p class="font-mono text-xs text-slate-400">ID: {{ deviceId() }} &bull; Type: {{ device()?.device_type }}</p>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        (click)="simulateTelemetry()"
+        [disabled]="isSimulating()"
+        class="flex items-center gap-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-xs font-medium text-cyan-300 transition-colors hover:bg-cyan-500/20 disabled:opacity-50"
+      >
+        <mat-icon [class.animate-spin]="isSimulating()" class="text-xs">play_arrow</mat-icon>
+        <span>{{ isSimulating() ? 'Injecting Data...' : 'Simulate Telemetry Packet' }}</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Device Overview Meta Card -->
+  <section *ngIf="device()" class="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow backdrop-blur">
+    <div class="grid grid-cols-2 gap-4 text-xs sm:grid-cols-4">
+      <div>
+        <span class="text-slate-500">Last Seen:</span>
+        <div class="mt-0.5 font-medium text-slate-200">{{ device()?.last_seen | momentDate : 'YYYY-MM-DD HH:mm:ss' }}</div>
+      </div>
+      <div>
+        <span class="text-slate-500">Registered:</span>
+        <div class="mt-0.5 font-medium text-slate-200">{{ device()?.created_at | momentDate : 'YYYY-MM-DD' }}</div>
+      </div>
+      <div>
+        <span class="text-slate-500">Organization:</span>
+        <div class="mt-0.5 font-mono text-slate-200">{{ device()?.organization_id }}</div>
+      </div>
+      <div>
+        <span class="text-slate-500">MQTT Telemetry Topic:</span>
+        <div class="mt-0.5 font-mono text-cyan-400">devices/{{ deviceId() }}/telemetry</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ThingsBoard Custom Widgets -->
+  <main class="space-y-6">
+    <!-- Live Telemetry SSE Widget -->
+    <app-telemetry-live-widget [deviceId]="deviceId()"></app-telemetry-live-widget>
+
+    <!-- Historical Chart ECharts Widget with Selectable Time Ranges -->
+    <app-telemetry-chart-widget [deviceId]="deviceId()"></app-telemetry-chart-widget>
+  </main>
+</div>

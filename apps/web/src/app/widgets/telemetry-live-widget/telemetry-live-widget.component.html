@@ -1,0 +1,67 @@
+<section class="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 shadow-xl backdrop-blur">
+  <header class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+    <div class="flex items-center gap-3">
+      <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400">
+        <mat-icon>stream</mat-icon>
+      </div>
+      <div>
+        <p class="text-base font-semibold text-white">Live Telemetry Stream</p>
+        <p class="text-xs text-slate-400">Real-time Server-Sent Events (SSE)</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <span
+        class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
+        [class.bg-emerald-500/10]="isConnected()"
+        [class.text-emerald-400]="isConnected()"
+        [class.border]="true"
+        [class.border-emerald-500/30]="isConnected()"
+        [class.bg-amber-500/10]="!isConnected()"
+        [class.text-amber-400]="!isConnected()"
+        [class.border-amber-500/30]="!isConnected()"
+      >
+        <span
+          class="h-2 w-2 rounded-full"
+          [class.bg-emerald-400]="isConnected()"
+          [class.animate-pulse]="isConnected()"
+          [class.bg-amber-400]="!isConnected()"
+        ></span>
+        {{ isConnected() ? 'STREAM ACTIVE' : 'CONNECTING' }}
+      </span>
+
+      <span *ngIf="lastReceivedTime()" class="text-xs text-slate-400">
+        Updated: {{ lastReceivedTime() }}
+      </span>
+    </div>
+  </header>
+
+  <main class="mt-5">
+    <div *ngIf="metricList().length > 0; else noDataBlock" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div
+        *ngFor="let metric of metricList()"
+        class="group relative overflow-hidden rounded-xl border border-slate-800 bg-slate-800/50 p-4 transition-all hover:border-cyan-500/40 hover:bg-slate-800"
+      >
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium uppercase tracking-wider text-slate-400">{{ metric.name }}</span>
+          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-700/60 text-cyan-400">
+            <mat-icon class="text-sm">{{ metric.icon }}</mat-icon>
+          </div>
+        </div>
+
+        <div class="mt-3 flex items-baseline gap-1">
+          <span class="text-2xl font-bold tracking-tight text-white">{{ metric.value }}</span>
+          <span class="text-sm font-medium text-cyan-400">{{ metric.unit }}</span>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noDataBlock>
+      <div class="flex flex-col items-center justify-center py-10 text-center">
+        <mat-icon class="text-4xl text-slate-600">sensors_off</mat-icon>
+        <p class="mt-2 text-sm font-medium text-slate-400">Waiting for live telemetry readings...</p>
+        <p class="text-xs text-slate-400">Telemetry will stream automatically once the device publishes to MQTT.</p>
+      </div>
+    </ng-template>
+  </main>
+</section>

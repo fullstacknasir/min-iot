@@ -1,0 +1,162 @@
+services:
+  # ==========================================
+  # Core Infrastructure Services
+  # ==========================================
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: miniot-timescaledb
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-miniot}
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-miniot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - miniot-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: miniot-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+      - ./infra/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - miniot-net
+
+  emqx:
+    image: emqx:5.8.0
+    container_name: miniot-emqx
+    restart: unless-stopped
+    ports:
+      - "${EMQX_PORT:-1883}:1883"           # MQTT TCP
+      - "${EMQX_WS_PORT:-8083}:8083"       # MQTT WebSocket
+      - "8084:8084"                         # MQTT WSS
+      - "8883:8883"                         # MQTT SSL
+      - "${EMQX_DASHBOARD_PORT:-18083}:18083" # EMQX Web Dashboard
+    environment:
+      EMQX_DASHBOARD__DEFAULT_USERNAME: ${EMQX_DASHBOARD_USER:-admin}
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASS:-public}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - emqx_data:/opt/emqx/data
+      - emqx_log:/opt/emqx/log
+      - ./infra/emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
+      - ./infra/emqx/certs:/opt/emqx/etc/certs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "emqx ctl status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - miniot-net
+
+  # ==========================================
+  # Application Services (Profile: apps)
+  # Run with: docker compose --profile apps up
+  # ==========================================
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: miniot-api
+    restart: unless-stopped
+    profiles: ["apps", "all"]
+    ports:
+      - "${API_PORT:-8080}:8080"
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      API_PORT: 8080
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-miniot}
+      DB_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200,http://localhost:80}
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - miniot-net
+
+  ingestor:
+    build:
+      context: ./apps/ingestor
+      dockerfile: Dockerfile
+    container_name: miniot-ingestor
+    restart: unless-stopped
+    profiles: ["apps", "all"]
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      EMQX_HOST: emqx
+      EMQX_PORT: 1883
+      INGESTOR_MQTT_CLIENT_ID: ${INGESTOR_MQTT_CLIENT_ID:-miniot-ingestor-01}
+      INGESTOR_MQTT_TOPIC: ${INGESTOR_MQTT_TOPIC:-devices/+/telemetry}
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-miniot}
+      DB_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      emqx:
+        condition: service_healthy
+    networks:
+      - miniot-net
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: miniot-web
+    restart: unless-stopped
+    profiles: ["apps", "all"]
+    ports:
+      - "${WEB_PORT:-4200}:80"
+    depends_on:
+      - api
+    networks:
+      - miniot-net
+
+volumes:
+  timescaledb_data:
+  redis_data:
+  emqx_data:
+  emqx_log:
+
+networks:
+  miniot-net:
+    driver: bridge

@@ -1,0 +1,68 @@
+<section class="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 shadow-xl backdrop-blur">
+  <header class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+    <div class="flex items-center gap-3">
+      <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400">
+        <mat-icon>show_chart</mat-icon>
+      </div>
+      <div>
+        <p class="text-base font-semibold text-white">Historical Telemetry Trends</p>
+        <p class="text-xs text-slate-400">TimescaleDB Hypertable Analytics & Apache ECharts</p>
+      </div>
+    </div>
+
+    <!-- Controls: Metric filter & Time-range selector -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Metric filter if multiple metrics available -->
+      <div *ngIf="availableMetrics().length > 1" class="flex items-center gap-1 rounded-xl bg-slate-800/80 p-1 border border-slate-700/60">
+        <button
+          type="button"
+          (click)="setMetricFilter('all')"
+          class="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+          [class.bg-indigo-600]="selectedMetric() === 'all'"
+          [class.text-white]="selectedMetric() === 'all'"
+          [class.text-slate-400]="selectedMetric() !== 'all'"
+        >
+          All
+        </button>
+        <button
+          *ngFor="let m of availableMetrics()"
+          type="button"
+          (click)="setMetricFilter(m)"
+          class="rounded-lg px-2.5 py-1 text-xs font-medium capitalize transition-colors"
+          [class.bg-indigo-600]="selectedMetric() === m"
+          [class.text-white]="selectedMetric() === m"
+          [class.text-slate-400]="selectedMetric() !== m"
+        >
+          {{ m }}
+        </button>
+      </div>
+
+      <!-- Time range buttons -->
+      <div class="flex items-center gap-1 rounded-xl bg-slate-800/80 p-1 border border-slate-700/60">
+        <button
+          *ngFor="let r of timeRanges"
+          type="button"
+          (click)="setTimeRange(r.value)"
+          class="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
+          [class.bg-cyan-600]="selectedRange() === r.value"
+          [class.text-white]="selectedRange() === r.value"
+          [class.text-slate-400]="selectedRange() !== r.value"
+        >
+          {{ r.value }}
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="relative mt-4">
+    <div *ngIf="isLoading()" class="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
+      <div class="flex items-center gap-2 text-sm text-cyan-400">
+        <mat-icon class="animate-spin">sync</mat-icon>
+        <span>Loading historical metrics...</span>
+      </div>
+    </div>
+
+    <!-- ECharts container with fixed height and 100% width -->
+    <div #chartContainer class="h-80 w-full min-h-[320px]"></div>
+  </main>
+</section>
