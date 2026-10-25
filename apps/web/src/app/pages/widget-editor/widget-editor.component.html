@@ -1,0 +1,369 @@
+<div class="flex flex-col space-y-5">
+  <!-- Feedback Messages -->
+  <aside *ngIf="actionMessage()" class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+    <div class="flex items-center gap-2">
+      <mat-icon class="text-sm">check_circle</mat-icon>
+      <span>{{ actionMessage() }}</span>
+    </div>
+  </aside>
+
+  <aside *ngIf="errorMessage()" class="rounded-xl border border-red-500/20 bg-red-500/10 p-3.5 text-xs font-medium text-red-600 dark:text-red-400">
+    <div class="flex items-center gap-2">
+      <mat-icon class="text-sm">error</mat-icon>
+      <span>{{ errorMessage() }}</span>
+    </div>
+  </aside>
+
+  <!-- Top Toolbar / Header -->
+  <header class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900/80 backdrop-blur lg:flex-row lg:items-center lg:justify-between">
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Back Button -->
+      <button
+        type="button"
+        (click)="navigateToLibrary()"
+        class="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
+        title="Back to Widget Library"
+      >
+        <mat-icon class="text-sm">arrow_back</mat-icon>
+      </button>
+
+      <!-- Widget Title & Type Input -->
+      <div>
+        <div class="flex items-center gap-2">
+          <input
+            type="text"
+            [(ngModel)]="widgetName"
+            placeholder="Widget Name"
+            class="text-base font-bold text-slate-900 dark:text-white bg-transparent border-b border-transparent hover:border-slate-300 focus:border-cyan-500 focus:outline-hidden transition-colors"
+          />
+          <span class="rounded bg-cyan-100 px-2 py-0.5 text-[10px] font-semibold text-cyan-800 dark:bg-cyan-950 dark:text-cyan-300">
+            ThingsBoard Custom Widget
+          </span>
+        </div>
+        <div class="text-xs text-slate-400 dark:text-slate-500">
+          Visual code editor with ThingsBoard lifecycle hooks (HTML, CSS, JS Controller)
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions: Presets, Docs, Recompile, Save -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Preset Dropdown -->
+      <select
+        (change)="loadPreset($any($event.target).value)"
+        class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 cursor-pointer focus:outline-hidden"
+      >
+        <option value="" disabled selected>Load Preset...</option>
+        <option *ngFor="let p of presets" [value]="p.id">{{ p.name }}</option>
+      </select>
+
+      <!-- API Docs Toggle -->
+      <button
+        type="button"
+        (click)="toggleDocs()"
+        class="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
+      >
+        <mat-icon class="text-xs">help_outline</mat-icon>
+        <span>{{ showDocs() ? 'Hide API' : 'ThingsBoard API' }}</span>
+      </button>
+
+      <!-- Recompile / Run -->
+      <button
+        type="button"
+        (click)="handleCodeChange()"
+        class="flex items-center gap-1.5 rounded-xl border border-cyan-500/30 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-100 dark:bg-cyan-950/40 dark:text-cyan-300 dark:hover:bg-cyan-900/60"
+        title="Recompile & Run in Live Sandbox"
+      >
+        <mat-icon class="text-xs">play_arrow</mat-icon>
+        <span>Run Sandbox</span>
+      </button>
+
+      <!-- Save Widget Button -->
+      <button
+        type="button"
+        [disabled]="isSaving()"
+        (click)="handleSaveWidget()"
+        class="flex items-center gap-1.5 rounded-xl bg-cyan-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-cyan-500 disabled:opacity-50"
+      >
+        <mat-icon class="text-xs" [class.animate-spin]="isSaving()">
+          {{ isSaving() ? 'sync' : 'save' }}
+        </mat-icon>
+        <span>{{ isSaving() ? 'Saving...' : 'Save Widget' }}</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ThingsBoard API Quick Reference Collapsible Drawer -->
+  <aside *ngIf="showDocs()" class="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-xs dark:border-cyan-500/30 dark:bg-cyan-950/20 transition-all">
+    <div class="flex items-center justify-between pb-2 border-b border-cyan-500/20">
+      <div class="flex items-center gap-2 font-bold text-cyan-800 dark:text-cyan-300">
+        <mat-icon class="text-sm">menu_book</mat-icon>
+        <span>ThingsBoard Widget Architecture & Lifecycle API Reference</span>
+      </div>
+      <button type="button" (click)="toggleDocs()" class="text-slate-400 hover:text-slate-600">
+        <mat-icon class="text-xs">close</mat-icon>
+      </button>
+    </div>
+
+    <div class="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-slate-700 dark:text-slate-300">
+      <div class="space-y-1">
+        <span class="font-bold text-cyan-700 dark:text-cyan-400">self.onInit()</span>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400">Called when DOM is mounted. Query elements using <code>self.ctx.$container.querySelector()</code>, initialize charts or timers.</p>
+      </div>
+
+      <div class="space-y-1">
+        <span class="font-bold text-cyan-700 dark:text-cyan-400">self.onDataUpdated(telemetry)</span>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400">Called whenever SSE pushes new telemetry metrics. <code>telemetry.metrics[metricName]</code> has latest numbers.</p>
+      </div>
+
+      <div class="space-y-1">
+        <span class="font-bold text-cyan-700 dark:text-cyan-400">self.onResize()</span>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400">Triggered on dashboard container resize. Call <code>chartInstance.resize()</code> to maintain layout responsiveness.</p>
+      </div>
+
+      <div class="space-y-1">
+        <span class="font-bold text-cyan-700 dark:text-cyan-400">self.ctx context</span>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400">Built-in helpers: <code>self.ctx.moment</code> (Moment.js), <code>self.ctx.echarts</code> (ECharts), <code>self.ctx.settings</code>, <code>self.ctx.data</code>.</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Split Editor Workspace -->
+  <main class="grid grid-cols-1 lg:grid-cols-2 gap-5 min-h-[580px]">
+    <!-- Left Column: Code Editor Tabs & Buffer -->
+    <section class="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+      <!-- Editor Tab Navigation -->
+      <header class="flex items-center justify-between border-b border-slate-200 bg-slate-50/80 px-3 py-2 dark:border-slate-800 dark:bg-slate-950/70">
+        <div class="flex items-center gap-1">
+          <button
+            type="button"
+            (click)="setActiveTab('html')"
+            class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+            [class.bg-white]="activeTab() === 'html'"
+            [class.text-cyan-600]="activeTab() === 'html'"
+            [class.shadow-xs]="activeTab() === 'html'"
+            [class.dark:bg-slate-800]="activeTab() === 'html'"
+            [class.dark:text-cyan-400]="activeTab() === 'html'"
+            [class.text-slate-600]="activeTab() !== 'html'"
+            [class.dark:text-slate-400]="activeTab() !== 'html'"
+          >
+            <mat-icon class="text-xs">html</mat-icon>
+            <span>HTML (Template)</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="setActiveTab('css')"
+            class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+            [class.bg-white]="activeTab() === 'css'"
+            [class.text-cyan-600]="activeTab() === 'css'"
+            [class.shadow-xs]="activeTab() === 'css'"
+            [class.dark:bg-slate-800]="activeTab() === 'css'"
+            [class.dark:text-cyan-400]="activeTab() === 'css'"
+            [class.text-slate-600]="activeTab() !== 'css'"
+            [class.dark:text-slate-400]="activeTab() !== 'css'"
+          >
+            <mat-icon class="text-xs">css</mat-icon>
+            <span>CSS (Style)</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="setActiveTab('javascript')"
+            class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+            [class.bg-white]="activeTab() === 'javascript'"
+            [class.text-cyan-600]="activeTab() === 'javascript'"
+            [class.shadow-xs]="activeTab() === 'javascript'"
+            [class.dark:bg-slate-800]="activeTab() === 'javascript'"
+            [class.dark:text-cyan-400]="activeTab() === 'javascript'"
+            [class.text-slate-600]="activeTab() !== 'javascript'"
+            [class.dark:text-slate-400]="activeTab() !== 'javascript'"
+          >
+            <mat-icon class="text-xs">javascript</mat-icon>
+            <span>JavaScript (Controller)</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="setActiveTab('settings')"
+            class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+            [class.bg-white]="activeTab() === 'settings'"
+            [class.text-cyan-600]="activeTab() === 'settings'"
+            [class.shadow-xs]="activeTab() === 'settings'"
+            [class.dark:bg-slate-800]="activeTab() === 'settings'"
+            [class.dark:text-cyan-400]="activeTab() === 'settings'"
+            [class.text-slate-600]="activeTab() !== 'settings'"
+            [class.dark:text-slate-400]="activeTab() !== 'settings'"
+          >
+            <mat-icon class="text-xs">tune</mat-icon>
+            <span>Settings Schema</span>
+          </button>
+        </div>
+
+        <span class="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+          {{ activeTab().toUpperCase() }}
+        </span>
+      </header>
+
+      <!-- Visual Studio Code Monaco Editor Viewport -->
+      <div class="relative flex-1 bg-slate-950 p-2">
+        <!-- 1. HTML Template Editor -->
+        <app-monaco-editor
+          *ngIf="activeTab() === 'html'"
+          language="html"
+          [(code)]="templateHtml"
+          (codeChange)="handleCodeChange()"
+          minHeight="540px"
+        ></app-monaco-editor>
+
+        <!-- 2. Scoped CSS Editor -->
+        <app-monaco-editor
+          *ngIf="activeTab() === 'css'"
+          language="css"
+          [(code)]="styleCss"
+          (codeChange)="handleCodeChange()"
+          minHeight="540px"
+        ></app-monaco-editor>
+
+        <!-- 3. ThingsBoard JS Controller Editor -->
+        <app-monaco-editor
+          *ngIf="activeTab() === 'javascript'"
+          language="javascript"
+          [(code)]="controllerJs"
+          (codeChange)="handleCodeChange()"
+          minHeight="540px"
+        ></app-monaco-editor>
+
+        <!-- 4. Settings JSON Schema Editor -->
+        <app-monaco-editor
+          *ngIf="activeTab() === 'settings'"
+          language="json"
+          [(code)]="settingsJson"
+          (codeChange)="handleCodeChange()"
+          minHeight="540px"
+        ></app-monaco-editor>
+      </div>
+
+      <!-- Editor Footer -->
+      <footer class="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-2 text-[11px] text-slate-500 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-400">
+        <span>ThingsBoard Execution Model: Isolated JS context with <code>self.ctx</code></span>
+        <span>Auto-sync enabled</span>
+      </footer>
+    </section>
+
+    <!-- Right Column: Live Sandbox, Telemetry Simulator & Logs -->
+    <section class="flex flex-col space-y-4">
+      <!-- Live Preview Container Card -->
+      <div class="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-xs dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+        <!-- Live Preview Header & Simulator Controls -->
+        <header class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/80 p-3.5 dark:border-slate-800 dark:bg-slate-950/70">
+          <div class="flex items-center gap-2">
+            <mat-icon class="text-sm text-cyan-500">preview</mat-icon>
+            <span class="text-xs font-bold text-slate-800 dark:text-slate-200">Live Preview Sandbox</span>
+          </div>
+
+          <!-- Data Source Selector (Live Device or Simulated) -->
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] text-slate-400">Device:</span>
+            <select
+              [(ngModel)]="selectedDeviceId"
+              class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 focus:outline-hidden"
+            >
+              <option value="">Simulated Telemetry</option>
+              <option *ngFor="let d of fleetDevices()" [value]="d.id">{{ d.name }}</option>
+            </select>
+          </div>
+        </header>
+
+        <!-- Simulated Telemetry Control Bar (when no device or testing values) -->
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/40 p-3 dark:border-slate-800/60 dark:bg-slate-950/30 text-xs">
+          <div class="flex items-center gap-3">
+            <span class="font-medium text-slate-600 dark:text-slate-400">Test Telemetry:</span>
+            <input
+              type="text"
+              [(ngModel)]="selectedMetricName"
+              placeholder="metric name"
+              class="w-24 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 focus:outline-hidden"
+            />
+            <input
+              type="range"
+              min="0"
+              max="150"
+              step="0.5"
+              [(ngModel)]="simulatedValue"
+              (input)="triggerSimulatedTelemetry()"
+              class="w-28 accent-cyan-600 cursor-pointer"
+            />
+            <span class="font-mono text-xs font-bold text-cyan-600 dark:text-cyan-400">{{ simulatedValue }}</span>
+          </div>
+
+          <button
+            type="button"
+            (click)="triggerSimulatedTelemetry()"
+            class="flex items-center gap-1 rounded-lg bg-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+          >
+            <mat-icon class="text-xs">send</mat-icon>
+            <span>Push Value</span>
+          </button>
+        </div>
+
+        <!-- Dynamic Custom Widget Runner Host -->
+        <main class="p-4 min-h-[260px] flex items-center justify-center bg-slate-100/50 dark:bg-slate-950/50">
+          <div class="w-full max-w-lg">
+            <app-custom-widget-runner
+              [liveCodeOverride]="liveCode()"
+              [deviceId]="selectedDeviceId"
+              [metricName]="selectedMetricName"
+              [simulatedData]="simulatedData()"
+              (runnerLog)="onRunnerLog($event)"
+            ></app-custom-widget-runner>
+          </div>
+        </main>
+      </div>
+
+      <!-- Execution Console / Log Panel -->
+      <section class="flex flex-col rounded-2xl border border-slate-200 bg-slate-950 text-white shadow-xs dark:border-slate-800 overflow-hidden">
+        <header class="flex items-center justify-between border-b border-slate-800 px-3.5 py-2 text-xs">
+          <div class="flex items-center gap-2">
+            <mat-icon class="text-sm text-cyan-400">terminal</mat-icon>
+            <span class="font-bold text-slate-300">Widget Sandbox Console</span>
+            <span class="rounded bg-slate-800 px-1.5 py-0.2 text-[10px] text-slate-400">{{ consoleLogs().length }}</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              (click)="clearConsole()"
+              class="text-[11px] text-slate-400 hover:text-white"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              (click)="toggleConsole()"
+              class="text-slate-400 hover:text-white"
+            >
+              <mat-icon class="text-xs">{{ showConsole() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          </div>
+        </header>
+
+        <main *ngIf="showConsole()" class="max-h-40 overflow-y-auto p-3 font-mono text-[11px] space-y-1">
+          <div *ngIf="consoleLogs().length === 0" class="text-slate-500 italic">
+            No console output. Call <code>console.log()</code> or trigger lifecycle updates to see execution events.
+          </div>
+          <div
+            *ngFor="let log of consoleLogs()"
+            class="flex items-start gap-2"
+            [class.text-emerald-400]="log.level === 'log'"
+            [class.text-amber-400]="log.level === 'warn'"
+            [class.text-red-400]="log.level === 'error'"
+          >
+            <span class="text-slate-600 select-none">[{{ log.timestamp }}]</span>
+            <span class="break-all">{{ log.message }}</span>
+          </div>
+        </main>
+      </section>
+    </section>
+  </main>
+</div>

@@ -1,0 +1,575 @@
+<div class="space-y-6">
+  <!-- Feedback Banner -->
+  <aside *ngIf="actionMessage()" class="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+    <div class="flex items-center gap-2">
+      <mat-icon class="text-sm">check_circle</mat-icon>
+      <span>{{ actionMessage() }}</span>
+    </div>
+  </aside>
+
+  <!-- Dashboard Top Toolbar -->
+  <header class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-lg backdrop-blur lg:flex-row lg:items-center lg:justify-between">
+    <!-- Left: Dashboard Selector & Info -->
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-400">
+        <mat-icon>dashboard_customize</mat-icon>
+      </div>
+
+      <div>
+        <div class="flex items-center gap-2">
+          <!-- Dashboard Selector Dropdown -->
+          <select
+            [ngModel]="selectedDashboard()?.id"
+            (ngModelChange)="onDashboardSelectChange($event)"
+            class="text-base font-bold text-slate-900 dark:text-white bg-transparent border-0 focus:ring-0 cursor-pointer pr-8"
+          >
+            <option *ngFor="let d of dashboards()" [value]="d.id">
+              {{ d.title }} {{ d.is_default ? '★ (Default)' : '' }}
+            </option>
+          </select>
+
+          <span *ngIf="selectedDashboard()?.is_default" class="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-bold text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400">
+            Default
+          </span>
+        </div>
+        <div class="text-xs text-slate-500 dark:text-slate-400">
+          {{ selectedDashboard()?.description || 'ThingsBoard widget canvas with live IoT telemetry reflow' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Action Controls -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- New Dashboard Trigger -->
+      <button
+        *ngIf="authService.isOperatorOrAdmin()"
+        type="button"
+        (click)="openCreateDashboardModal()"
+        class="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
+      >
+        <mat-icon class="text-xs">add</mat-icon>
+        <span>New Dashboard</span>
+      </button>
+
+      <!-- Set Default -->
+      <button
+        *ngIf="authService.isOperatorOrAdmin() && selectedDashboard() && !selectedDashboard()?.is_default"
+        type="button"
+        (click)="handleSetDefault(selectedDashboard()!)"
+        class="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
+      >
+        <mat-icon class="text-xs">star_border</mat-icon>
+        <span>Set Default</span>
+      </button>
+
+      <!-- Edit Canvas Toggle Button -->
+      <button
+        *ngIf="authService.isOperatorOrAdmin() && selectedDashboard()"
+        type="button"
+        (click)="toggleEditMode()"
+        class="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition shadow-xs"
+        [class.bg-amber-600]="isEditMode()"
+        [class.text-white]="isEditMode()"
+        [class.hover:bg-amber-500]="isEditMode()"
+        [class.bg-cyan-600]="!isEditMode()"
+        [class.text-white]="!isEditMode()"
+        [class.hover:bg-cyan-500]="!isEditMode()"
+      >
+        <mat-icon class="text-xs">{{ isEditMode() ? 'done' : 'tune' }}</mat-icon>
+        <span>{{ isEditMode() ? 'Done Editing' : 'Customize Canvas' }}</span>
+      </button>
+
+      <!-- Delete Dashboard -->
+      <button
+        *ngIf="authService.isOperatorOrAdmin() && selectedDashboard() && dashboards().length > 1"
+        type="button"
+        (click)="handleDeleteDashboard(selectedDashboard()!)"
+        class="flex h-8 w-8 items-center justify-center rounded-xl text-red-500 transition hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10"
+        title="Delete Dashboard"
+      >
+        <mat-icon class="text-sm">delete</mat-icon>
+      </button>
+    </div>
+  </header>
+
+  <!-- Edit Mode Action Bar -->
+  <section *ngIf="isEditMode() && selectedDashboard()" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 transition-colors">
+    <div class="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+      <mat-icon class="text-sm">edit_note</mat-icon>
+      <span>Customization Mode: Add widgets, rearrange order, or adjust grid widths.</span>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        (click)="openAddWidgetModal()"
+        class="flex items-center gap-1.5 rounded-xl bg-cyan-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-cyan-500"
+      >
+        <mat-icon class="text-xs">add</mat-icon>
+        <span>Add Widget</span>
+      </button>
+
+      <button
+        type="button"
+        (click)="handleSaveLayout()"
+        class="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500"
+      >
+        <mat-icon class="text-xs">save</mat-icon>
+        <span>Save Canvas</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Empty Canvas State (No dashboards) -->
+  <section *ngIf="!isLoading() && dashboards().length === 0" class="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-16 text-center dark:border-slate-800 dark:bg-slate-900/80">
+    <mat-icon class="text-5xl text-slate-300 dark:text-slate-600">dashboard</mat-icon>
+    <div class="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-300">No Dashboards Configured</div>
+    <div class="mt-1 text-xs text-slate-400 dark:text-slate-500">Create your first custom ThingsBoard widget canvas to monitor your fleet.</div>
+    <button
+      *ngIf="authService.isOperatorOrAdmin()"
+      type="button"
+      (click)="openCreateDashboardModal()"
+      class="mt-4 flex items-center gap-1.5 rounded-xl bg-cyan-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-cyan-500"
+    >
+      <mat-icon class="text-xs">add</mat-icon>
+      <span>Create Canvas</span>
+    </button>
+  </section>
+
+  <!-- Empty Widgets State (Dashboard exists but 0 widgets) -->
+  <section *ngIf="selectedDashboard() && (selectedDashboard()?.configuration?.widgets?.length ?? 0) === 0" class="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-16 text-center dark:border-slate-800 dark:bg-slate-900/80">
+    <mat-icon class="text-5xl text-slate-300 dark:text-slate-600">widgets</mat-icon>
+    <div class="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Empty Widget Canvas</div>
+    <div class="mt-1 text-xs text-slate-400 dark:text-slate-500">Add radial gauges, time-series charts, digital cards, or control switches to this dashboard.</div>
+    <button
+      *ngIf="authService.isOperatorOrAdmin()"
+      type="button"
+      (click)="openAddWidgetModal()"
+      class="mt-4 flex items-center gap-1.5 rounded-xl bg-cyan-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-cyan-500"
+    >
+      <mat-icon class="text-xs">add</mat-icon>
+      <span>Add First Widget</span>
+    </button>
+  </section>
+
+  <!-- Widget Canvas Grid -->
+  <main *ngIf="selectedDashboard() && (selectedDashboard()?.configuration?.widgets?.length ?? 0) > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <article
+      *ngFor="let w of selectedDashboard()?.configuration?.widgets; let idx = index"
+      class="relative flex flex-col transition-all duration-150"
+      [ngClass]="getColSpanClass(w.col_span)"
+    >
+      <!-- Edit Mode Overlay Controls -->
+      <aside *ngIf="isEditMode()" class="flex items-center justify-between bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-t-xl border border-b-0 border-slate-300 dark:border-slate-700 text-xs">
+        <span class="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[150px]">
+          {{ w.title }}
+        </span>
+
+        <div class="flex items-center gap-1">
+          <!-- Move Left -->
+          <button
+            type="button"
+            [disabled]="idx === 0"
+            (click)="handleMoveWidget(idx, 'left')"
+            class="p-1 rounded text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30"
+            title="Move Left"
+          >
+            <mat-icon class="text-xs">arrow_back</mat-icon>
+          </button>
+
+          <!-- Move Right -->
+          <button
+            type="button"
+            [disabled]="idx === (selectedDashboard()?.configuration?.widgets?.length ?? 1) - 1"
+            (click)="handleMoveWidget(idx, 'right')"
+            class="p-1 rounded text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30"
+            title="Move Right"
+          >
+            <mat-icon class="text-xs">arrow_forward</mat-icon>
+          </button>
+
+          <!-- Toggle Width -->
+          <button
+            type="button"
+            (click)="handleToggleColSpan(w)"
+            class="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200"
+            title="Change Grid Width"
+          >
+            <mat-icon class="text-xs">view_column</mat-icon>
+            <span>{{ w.col_span }}x</span>
+          </button>
+
+          <!-- Delete Widget -->
+          <button
+            type="button"
+            (click)="handleRemoveWidget(w.id)"
+            class="p-1 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+            title="Remove Widget"
+          >
+            <mat-icon class="text-xs">delete</mat-icon>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Widget Host Component Body -->
+      <div class="h-full min-h-[220px]" [class.rounded-t-none]="isEditMode()">
+        <!-- 1. Radial Gauge Widget -->
+        <app-telemetry-gauge-widget
+          *ngIf="w.type === 'gauge'"
+          [deviceId]="w.device_id"
+          [metricName]="w.metric_name || 'temperature'"
+          [title]="w.title"
+          [min]="$any(w.settings?.['min']) ?? 0"
+          [max]="$any(w.settings?.['max']) ?? 100"
+          [unit]="$any(w.settings?.['unit'])"
+        ></app-telemetry-gauge-widget>
+
+        <!-- 2. Digital Card Widget -->
+        <app-telemetry-digital-card-widget
+          *ngIf="w.type === 'digital_card'"
+          [deviceId]="w.device_id"
+          [metricName]="w.metric_name || 'temperature'"
+          [title]="w.title"
+          [unit]="$any(w.settings?.['unit'])"
+        ></app-telemetry-digital-card-widget>
+
+        <!-- 3. Two-Way Switch Widget -->
+        <app-telemetry-switch-widget
+          *ngIf="w.type === 'switch'"
+          [deviceId]="w.device_id"
+          [metricName]="w.metric_name || 'relay'"
+          [title]="w.title"
+        ></app-telemetry-switch-widget>
+
+        <!-- 4. Historical Time-Series Chart Widget -->
+        <app-telemetry-chart-widget
+          *ngIf="w.type === 'chart'"
+          [deviceId]="w.device_id"
+        ></app-telemetry-chart-widget>
+
+        <!-- 5. Full Telemetry Live Feed Widget -->
+        <app-telemetry-live-widget
+          *ngIf="w.type === 'live_feed'"
+          [deviceId]="w.device_id"
+        ></app-telemetry-live-widget>
+
+        <!-- 6. ThingsBoard Custom Widget Runner -->
+        <app-custom-widget-runner
+          *ngIf="w.type === 'custom'"
+          [widgetId]="$any(w.settings?.['customWidgetId'])"
+          [deviceId]="w.device_id"
+          [metricName]="w.metric_name || 'temperature'"
+          [customSettings]="$any(w.settings)"
+        ></app-custom-widget-runner>
+      </div>
+    </article>
+  </main>
+
+  <!-- Modal: Add Widget to Canvas -->
+  <div *ngIf="showAddWidgetModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+    <div class="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl transition-colors dark:border-slate-800 dark:bg-slate-900">
+      <header class="flex items-center justify-between border-b border-slate-200 p-5 dark:border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <mat-icon class="text-cyan-600 dark:text-cyan-400">add_chart</mat-icon>
+          <div class="text-base font-bold text-slate-900 dark:text-white">Add Widget to Canvas</div>
+        </div>
+        <button
+          type="button"
+          (click)="closeAddWidgetModal()"
+          class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+      </header>
+
+      <form (ngSubmit)="handleAddWidget()" class="p-5 space-y-4 text-xs">
+        <!-- Widget Type Selection -->
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-2">Widget Type *</label>
+          <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <button
+              type="button"
+              (click)="newWidgetType = 'gauge'"
+              class="flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition"
+              [class.border-cyan-500]="newWidgetType === 'gauge'"
+              [class.bg-cyan-50]="newWidgetType === 'gauge'"
+              [class.dark:bg-cyan-950/40]="newWidgetType === 'gauge'"
+              [class.border-slate-200]="newWidgetType !== 'gauge'"
+              [class.dark:border-slate-800]="newWidgetType !== 'gauge'"
+            >
+              <mat-icon class="text-cyan-600 dark:text-cyan-400">speed</mat-icon>
+              <span class="font-semibold text-slate-800 dark:text-slate-200">Radial Gauge</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="newWidgetType = 'digital_card'"
+              class="flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition"
+              [class.border-cyan-500]="newWidgetType === 'digital_card'"
+              [class.bg-cyan-50]="newWidgetType === 'digital_card'"
+              [class.dark:bg-cyan-950/40]="newWidgetType === 'digital_card'"
+              [class.border-slate-200]="newWidgetType !== 'digital_card'"
+              [class.dark:border-slate-800]="newWidgetType !== 'digital_card'"
+            >
+              <mat-icon class="text-cyan-600 dark:text-cyan-400">pin</mat-icon>
+              <span class="font-semibold text-slate-800 dark:text-slate-200">Digital KPI</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="newWidgetType = 'switch'"
+              class="flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition"
+              [class.border-cyan-500]="newWidgetType === 'switch'"
+              [class.bg-cyan-50]="newWidgetType === 'switch'"
+              [class.dark:bg-cyan-950/40]="newWidgetType === 'switch'"
+              [class.border-slate-200]="newWidgetType !== 'switch'"
+              [class.dark:border-slate-800]="newWidgetType !== 'switch'"
+            >
+              <mat-icon class="text-cyan-600 dark:text-cyan-400">toggle_on</mat-icon>
+              <span class="font-semibold text-slate-800 dark:text-slate-200">RPC Switch</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="newWidgetType = 'chart'"
+              class="flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition"
+              [class.border-cyan-500]="newWidgetType === 'chart'"
+              [class.bg-cyan-50]="newWidgetType === 'chart'"
+              [class.dark:bg-cyan-950/40]="newWidgetType === 'chart'"
+              [class.border-slate-200]="newWidgetType !== 'chart'"
+              [class.dark:border-slate-800]="newWidgetType !== 'chart'"
+            >
+              <mat-icon class="text-cyan-600 dark:text-cyan-400">show_chart</mat-icon>
+              <span class="font-semibold text-slate-800 dark:text-slate-200">History Chart</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="newWidgetType = 'live_feed'"
+              class="flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition"
+              [class.border-cyan-500]="newWidgetType === 'live_feed'"
+              [class.bg-cyan-50]="newWidgetType === 'live_feed'"
+              [class.dark:bg-cyan-950/40]="newWidgetType === 'live_feed'"
+              [class.border-slate-200]="newWidgetType !== 'live_feed'"
+              [class.dark:border-slate-800]="newWidgetType !== 'live_feed'"
+            >
+              <mat-icon class="text-cyan-600 dark:text-cyan-400">sensors</mat-icon>
+              <span class="font-semibold text-slate-800 dark:text-slate-200">Live Stream</span>
+            </button>
+
+            <button
+              type="button"
+              (click)="newWidgetType = 'custom'"
+              class="flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition"
+              [class.border-cyan-500]="newWidgetType === 'custom'"
+              [class.bg-cyan-50]="newWidgetType === 'custom'"
+              [class.dark:bg-cyan-950/40]="newWidgetType === 'custom'"
+              [class.border-slate-200]="newWidgetType !== 'custom'"
+              [class.dark:border-slate-800]="newWidgetType !== 'custom'"
+            >
+              <mat-icon class="text-cyan-600 dark:text-cyan-400">extension</mat-icon>
+              <span class="font-semibold text-slate-800 dark:text-slate-200">Custom Widget</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Custom Widget Selection Dropdown -->
+        <div *ngIf="newWidgetType === 'custom'">
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Select Custom Widget *</label>
+          <div *ngIf="customWidgets().length === 0" class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[11px] text-amber-700 dark:text-amber-400 flex items-center justify-between">
+            <span>No custom widgets created yet.</span>
+            <a routerLink="/widgets/editor" (click)="closeAddWidgetModal()" class="font-bold underline">Create in Studio</a>
+          </div>
+          <select
+            *ngIf="customWidgets().length > 0"
+            [(ngModel)]="newWidgetCustomWidgetId"
+            name="customWidgetId"
+            required
+            class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900 focus:border-cyan-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          >
+            <option *ngFor="let cw of customWidgets()" [value]="cw.id">
+              {{ cw.name }} ({{ cw.widget_type }})
+            </option>
+          </select>
+        </div>
+
+        <!-- Target Device Selection -->
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Target Device *</label>
+          <select
+            [(ngModel)]="newWidgetDeviceId"
+            name="widgetDeviceId"
+            required
+            class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900 focus:border-cyan-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          >
+            <option *ngFor="let dev of fleetDevices()" [value]="dev.id">
+              {{ dev.name }} ({{ dev.device_type }})
+            </option>
+          </select>
+        </div>
+
+        <!-- Widget Title -->
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Widget Title</label>
+          <input
+            type="text"
+            [(ngModel)]="newWidgetTitle"
+            name="widgetTitle"
+            placeholder="e.g. Engine RPM or Warehouse Temperature"
+            class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900 focus:border-cyan-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          />
+        </div>
+
+        <!-- Metric Key & Column Span -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Metric Key *</label>
+            <input
+              type="text"
+              [(ngModel)]="newWidgetMetricName"
+              name="widgetMetric"
+              required
+              placeholder="e.g. temperature"
+              class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900 font-mono focus:border-cyan-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Width (Columns)</label>
+            <select
+              [(ngModel)]="newWidgetColSpan"
+              name="widgetColSpan"
+              class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900 focus:border-cyan-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            >
+              <option [ngValue]="1">1 Column (Normal)</option>
+              <option [ngValue]="2">2 Columns (Wide)</option>
+              <option [ngValue]="3">3 Columns (Full Width)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Gauge Min/Max Options (if gauge) -->
+        <div *ngIf="newWidgetType === 'gauge'" class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Min Value</label>
+            <input
+              type="number"
+              [(ngModel)]="newWidgetMin"
+              name="widgetMin"
+              class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900 font-mono dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Max Value</label>
+            <input
+              type="number"
+              [(ngModel)]="newWidgetMax"
+              name="widgetMax"
+              class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900 font-mono dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Unit</label>
+            <input
+              type="text"
+              [(ngModel)]="newWidgetUnit"
+              name="widgetUnit"
+              placeholder="e.g. °C, %"
+              class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            />
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="flex items-center justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-800">
+          <button
+            type="button"
+            (click)="closeAddWidgetModal()"
+            class="rounded-xl border border-slate-300 px-4 py-2 font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="rounded-xl bg-cyan-600 px-4 py-2 font-semibold text-white shadow-sm hover:bg-cyan-500"
+          >
+            Place on Canvas
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Create New Dashboard -->
+  <div *ngIf="showCreateDashboardModal()" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+    <div class="w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl transition-colors dark:border-slate-800 dark:bg-slate-900">
+      <header class="flex items-center justify-between border-b border-slate-200 p-5 dark:border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <mat-icon class="text-cyan-600 dark:text-cyan-400">dashboard_customize</mat-icon>
+          <div class="text-base font-bold text-slate-900 dark:text-white">Create New Dashboard</div>
+        </div>
+        <button
+          type="button"
+          (click)="closeCreateDashboardModal()"
+          class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+      </header>
+
+      <form (ngSubmit)="handleCreateDashboard()" class="p-5 space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Dashboard Title *</label>
+          <input
+            type="text"
+            [(ngModel)]="newDashboardTitle"
+            name="dashTitle"
+            required
+            placeholder="e.g. Main Plant Overview"
+            class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900 focus:border-cyan-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          />
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Description</label>
+          <textarea
+            [(ngModel)]="newDashboardDescription"
+            name="dashDesc"
+            rows="2"
+            placeholder="Purpose and scope of this telemetry canvas..."
+            class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-slate-900 focus:border-cyan-500 focus:outline-hidden dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          ></textarea>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <input
+            type="checkbox"
+            id="dashDefault"
+            [(ngModel)]="newDashboardIsDefault"
+            name="dashDefault"
+            class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 dark:border-slate-700 dark:bg-slate-950"
+          />
+          <label for="dashDefault" class="font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+            Set as default organization dashboard
+          </label>
+        </div>
+
+        <footer class="flex items-center justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-800">
+          <button
+            type="button"
+            (click)="closeCreateDashboardModal()"
+            class="rounded-xl border border-slate-300 px-4 py-2 font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="rounded-xl bg-cyan-600 px-4 py-2 font-semibold text-white shadow-sm hover:bg-cyan-500"
+          >
+            Create Dashboard
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+</div>

@@ -31,3 +31,9 @@ export const FORMAT_DATETIME_DISPLAY = 'YYYY-MM-DD HH:mm:ss';
 export const FORMAT_TIME_ONLY = 'HH:mm:ss';
 export const FORMAT_DATE_ONLY = 'YYYY-MM-DD';
 export const FORMAT_CHART_AXIS = 'HH:mm:ss';
+
+export const DEFAULT_PAGE = 1;
+export const DEFAULT_PAGE_LIMIT = 10;
+export const DEFAULT_GRID_PAGE_LIMIT = 6;
+export const PAGE_SIZE_OPTIONS: readonly number[] = [5, 10, 20, 50];
+export const GRID_PAGE_SIZE_OPTIONS: readonly number[] = [6, 9, 12, 24];

@@ -1,4 +1,5 @@
 export * from './telemetry.model';
+export * from './pagination.model';
 
 export type DeviceStatus = 'online' | 'offline' | 'disabled' | 'revoked';
 
@@ -10,6 +11,8 @@ export interface Device {
   status: DeviceStatus;
   metadata?: Record<string, unknown>;
   last_seen?: string | null;
+  assigned_user_id?: string | null;
+  assigned_user_email?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -40,12 +43,15 @@ export interface CreateDevicePayload {
   name: string;
   device_type: string;
   metadata?: Record<string, unknown>;
+  assigned_user_id?: string | null;
 }
 
 export interface UpdateDevicePayload {
   name?: string;
   device_type?: string;
   metadata?: Record<string, unknown>;
+  assigned_user_id?: string | null;
+  clear_assigned_user?: boolean;
 }
 
 export interface DeviceStatusActionResponse {

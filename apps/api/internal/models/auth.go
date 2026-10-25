@@ -19,10 +19,18 @@ type User struct {
 	ID             string    `json:"id"`
 	OrganizationID string    `json:"organization_id"`
 	Email          string    `json:"email"`
+	Name           string    `json:"name"`
 	PasswordHash   string    `json:"-"`
 	Role           string    `json:"role"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type UpdateProfileRequest struct {
+	Name            *string `json:"name"`
+	Email           *string `json:"email"`
+	CurrentPassword *string `json:"current_password"`
+	NewPassword     *string `json:"new_password"`
 }
 
 type RefreshToken struct {

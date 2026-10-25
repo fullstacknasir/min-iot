@@ -1,0 +1,121 @@
+<section class="flex flex-col h-full w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-950 text-slate-200 shadow-md">
+  <!-- VS Code Action Bar & Quick Controls -->
+  <header class="flex items-center justify-between border-b border-slate-800 bg-slate-900/90 px-3 py-1.5 text-xs select-none">
+    <div class="flex items-center gap-2">
+      <!-- VS Code Icon & Label -->
+      <div class="flex items-center gap-1.5 text-cyan-400 font-semibold tracking-wide">
+        <mat-icon class="text-sm">code</mat-icon>
+        <span class="text-[11px] uppercase tracking-wider text-slate-300">VS Code Editor</span>
+      </div>
+
+      <!-- Language Badge -->
+      <span class="rounded bg-cyan-950 px-2 py-0.5 text-[10px] font-mono font-bold text-cyan-400 border border-cyan-800/40">
+        {{ language.toUpperCase() }}
+      </span>
+
+      <span *ngIf="isLoaded()" class="hidden sm:inline-flex items-center gap-1 text-[10px] text-emerald-400">
+        <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>IntelliSense Ready</span>
+      </span>
+    </div>
+
+    <!-- Quick Tools: Format, Wrap, Minimap, Theme -->
+    <div class="flex items-center gap-1">
+      <!-- Format Document -->
+      <button
+        type="button"
+        (click)="formatDocument()"
+        class="flex items-center gap-1 rounded px-2 py-1 text-[11px] text-slate-400 hover:bg-slate-800 hover:text-white transition"
+        title="Format Code (Shift+Alt+F)"
+      >
+        <mat-icon class="text-xs">format_align_left</mat-icon>
+        <span class="hidden md:inline">Format</span>
+      </button>
+
+      <!-- Toggle Word Wrap -->
+      <button
+        type="button"
+        (click)="toggleWordWrap()"
+        class="flex items-center gap-1 rounded px-2 py-1 text-[11px] transition"
+        [class.text-cyan-400]="isWordWrapOn()"
+        [class.bg-slate-800]="isWordWrapOn()"
+        [class.text-slate-400]="!isWordWrapOn()"
+        [class.hover:bg-slate-800]="!isWordWrapOn()"
+        [class.hover:text-white]="!isWordWrapOn()"
+        title="Toggle Word Wrap"
+      >
+        <mat-icon class="text-xs">wrap_text</mat-icon>
+        <span class="hidden md:inline">Wrap</span>
+      </button>
+
+      <!-- Toggle Minimap -->
+      <button
+        type="button"
+        (click)="toggleMinimap()"
+        class="flex items-center gap-1 rounded px-2 py-1 text-[11px] transition"
+        [class.text-cyan-400]="isMinimapOn()"
+        [class.bg-slate-800]="isMinimapOn()"
+        [class.text-slate-400]="!isMinimapOn()"
+        [class.hover:bg-slate-800]="!isMinimapOn()"
+        [class.hover:text-white]="!isMinimapOn()"
+        title="Toggle Minimap"
+      >
+        <mat-icon class="text-xs">map</mat-icon>
+        <span class="hidden md:inline">Minimap</span>
+      </button>
+
+      <!-- Toggle Dark/Light Theme -->
+      <button
+        type="button"
+        (click)="toggleTheme()"
+        class="flex items-center gap-1 rounded px-2 py-1 text-[11px] text-slate-400 hover:bg-slate-800 hover:text-white transition"
+        [title]="currentTheme() === 'vs-dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'"
+      >
+        <mat-icon class="text-xs">{{ currentTheme() === 'vs-dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      </button>
+    </div>
+  </header>
+
+  <!-- Monaco Mount Container -->
+  <main class="relative flex-1 w-full bg-slate-950 overflow-hidden" [style.minHeight]="minHeight">
+    <!-- Active Monaco Container -->
+    <div
+      #editorContainer
+      class="h-full w-full"
+      [class.opacity-0]="isInitializing()"
+      [class.opacity-100]="isLoaded()"
+    ></div>
+
+    <!-- Initializing State -->
+    <div *ngIf="isInitializing()" class="absolute inset-0 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs">
+      <div class="flex items-center gap-2 text-xs text-slate-400 font-mono">
+        <mat-icon class="animate-spin text-sm text-cyan-400">sync</mat-icon>
+        <span>Loading Visual Studio Code Engine...</span>
+      </div>
+    </div>
+
+    <!-- Fallback Textarea for Headless/Test Environments -->
+    <div *ngIf="!isInitializing() && !isLoaded()" class="h-full w-full p-4">
+      <textarea
+        [ngModel]="code"
+        (ngModelChange)="onTextareaChange($event)"
+        rows="24"
+        spellcheck="false"
+        class="h-full w-full resize-none bg-transparent font-mono text-xs leading-relaxed text-slate-200 focus:outline-hidden"
+      ></textarea>
+    </div>
+  </main>
+
+  <!-- VS Code Status Bar -->
+  <footer class="flex items-center justify-between border-t border-slate-800 bg-slate-900/80 px-3 py-1 text-[10px] font-mono text-slate-400 select-none">
+    <div class="flex items-center gap-3">
+      <span>ThingsBoard Widget Runtime</span>
+      <span class="hidden sm:inline">UTF-8</span>
+      <span class="hidden sm:inline">Spaces: 2</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-cyan-400">{{ language.toUpperCase() }}</span>
+      <span>VS Code Monaco</span>
+    </div>
+  </footer>
+</section>

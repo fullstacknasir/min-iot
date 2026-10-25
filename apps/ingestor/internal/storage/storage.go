@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -97,7 +99,8 @@ func (s *Storage) SaveTelemetry(ctx context.Context, data *validator.ValidatedTe
 		return err
 	}
 
-	return s.updateRedisCacheIfNewest(ctx, data)
+	_ = s.updateRedisCacheIfNewest(ctx, data)
+	return s.evaluateRules(ctx, data)
 }
 
 func (s *Storage) executeTelemetryInserts(ctx context.Context, tx pgx.Tx, data *validator.ValidatedTelemetry) error {
@@ -339,3 +342,122 @@ func (s *Storage) GetCachedLatestTelemetry(ctx context.Context, deviceID string)
 	}
 	return &cached, nil
 }
+
+type IngestorRule struct {
+	ID                  string
+	Name                string
+	Condition           string
+	Threshold           float64
+	Severity            string
+	CooldownSeconds     int
+	NotificationChannel string
+	WebhookURL          string
+}
+
+func (s *Storage) evaluateRules(ctx context.Context, data *validator.ValidatedTelemetry) error {
+	var orgID, deviceType string
+	err := s.Pool.QueryRow(ctx, "SELECT organization_id, COALESCE(device_type, '') FROM devices WHERE id = $1", data.DeviceID).Scan(&orgID, &deviceType)
+	if err != nil {
+		return nil
+	}
+
+	for metricName, metricValue := range data.Metrics {
+		s.evaluateMetricRules(ctx, orgID, deviceType, data.DeviceID, metricName, metricValue, data.DeviceTime)
+	}
+	return nil
+}
+
+func (s *Storage) evaluateMetricRules(ctx context.Context, orgID, deviceType, deviceID, metricName string, metricValue float64, triggeredAt time.Time) {
+	query := `SELECT id, name, condition, threshold, severity, cooldown_seconds, notification_channel, webhook_url
+	          FROM rules
+	          WHERE organization_id = $1 AND enabled = TRUE AND metric_name = $2
+	            AND (device_id IS NULL OR device_id = $3)
+	            AND (device_type = '' OR device_type = $4)`
+
+	rows, err := s.Pool.Query(ctx, query, orgID, metricName, deviceID, deviceType)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var r IngestorRule
+		if err := rows.Scan(&r.ID, &r.Name, &r.Condition, &r.Threshold, &r.Severity, &r.CooldownSeconds, &r.NotificationChannel, &r.WebhookURL); err != nil {
+			continue
+		}
+
+		if !evaluateCondition(r.Condition, metricValue, r.Threshold) {
+			continue
+		}
+
+		cooldownKey := fmt.Sprintf("cooldown:rule:%s:device:%s", r.ID, deviceID)
+		if s.Redis != nil {
+			exists, _ := s.Redis.Exists(ctx, cooldownKey).Result()
+			if exists > 0 {
+				continue
+			}
+			_ = s.Redis.Set(ctx, cooldownKey, "1", time.Duration(r.CooldownSeconds)*time.Second).Err()
+		}
+
+		s.triggerIngestorAlert(ctx, orgID, deviceID, metricName, metricValue, &r, triggeredAt)
+	}
+}
+
+func (s *Storage) triggerIngestorAlert(ctx context.Context, orgID, deviceID, metricName string, metricValue float64, r *IngestorRule, triggeredAt time.Time) {
+	shortDev := deviceID
+	if len(shortDev) > 6 {
+		shortDev = shortDev[:6]
+	}
+	alertID := fmt.Sprintf("alt_%d_%s", time.Now().UnixNano(), shortDev)
+	notificationID := fmt.Sprintf("ntf_%d", time.Now().UnixNano())
+	msg := fmt.Sprintf("%s (%.2f %s %.2f) detected on device %s", r.Name, metricValue, r.Condition, r.Threshold, deviceID)
+
+	alertQuery := `INSERT INTO alerts (id, organization_id, rule_id, device_id, severity, status, message, metric_name, metric_value, threshold_value, triggered_at, created_at, updated_at)
+	               VALUES ($1, $2, $3, $4, $5, 'active', $6, $7, $8, $9, $10, NOW(), NOW())`
+	_, _ = s.Pool.Exec(ctx, alertQuery, alertID, orgID, r.ID, deviceID, r.Severity, msg, metricName, metricValue, r.Threshold, triggeredAt)
+
+	notifQuery := `INSERT INTO notifications (id, organization_id, alert_id, title, message, severity, channel, read, created_at)
+	               VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, NOW())`
+	title := fmt.Sprintf("[%s] %s", strings.ToUpper(r.Severity), r.Name)
+	_, _ = s.Pool.Exec(ctx, notifQuery, notificationID, orgID, alertID, title, msg, r.Severity, r.NotificationChannel)
+
+	if s.Redis != nil {
+		eventPayload := map[string]interface{}{
+			"alert": map[string]interface{}{
+				"id": alertID, "organization_id": orgID, "rule_id": r.ID, "device_id": deviceID,
+				"severity": r.Severity, "status": "active", "message": msg,
+				"metric_name": metricName, "metric_value": metricValue, "threshold_value": r.Threshold,
+				"triggered_at": triggeredAt,
+			},
+			"notification": map[string]interface{}{
+				"id": notificationID, "organization_id": orgID, "alert_id": alertID,
+				"title": title, "message": msg, "severity": r.Severity,
+				"channel": r.NotificationChannel, "read": false, "created_at": time.Now().UTC(),
+			},
+		}
+		if encoded, err := json.Marshal(eventPayload); err == nil {
+			channel := fmt.Sprintf("org:%s:notifications", orgID)
+			_ = s.Redis.Publish(ctx, channel, encoded).Err()
+		}
+	}
+}
+
+func evaluateCondition(condition string, actualValue, threshold float64) bool {
+	switch condition {
+	case ">":
+		return actualValue > threshold
+	case ">=":
+		return actualValue >= threshold
+	case "<":
+		return actualValue < threshold
+	case "<=":
+		return actualValue <= threshold
+	case "==":
+		return math.Abs(actualValue-threshold) < 1e-9
+	case "!=":
+		return math.Abs(actualValue-threshold) >= 1e-9
+	default:
+		return false
+	}
+}
+

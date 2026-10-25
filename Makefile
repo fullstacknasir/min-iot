@@ -3,14 +3,13 @@
 help:
 	@echo "minIoT Monorepo Command Center"
 	@echo ""
-	@echo "Infrastructure commands:"
-	@echo "  make up                 Start infrastructure (TimescaleDB, Redis, EMQX)"
-	@echo "  make down               Stop and remove containers"
-	@echo "  make infra              Alias for make up"
-	@echo "  make logs               Follow docker logs for infrastructure"
-	@echo "  make apps               Start all services (infra + api + ingestor + web) via Docker"
+	@echo "Docker Deployment Commands:"
+	@echo "  make up                 Deploy the whole minIoT in Docker (PostgreSQL, Redis, EMQX, pgAdmin4, API, Ingestor, Web)"
+	@echo "  make down               Stop and remove all Docker containers"
+	@echo "  make infra              Start only infrastructure services in Docker (TimescaleDB, Redis, EMQX, pgAdmin4)"
+	@echo "  make logs               Follow real-time Docker container logs"
 	@echo ""
-	@echo "Local development commands:"
+	@echo "Local Development Commands:"
 	@echo "  make dev-api            Run Go API locally with live reload/go run"
 	@echo "  make dev-ingestor       Run Go Ingestor locally"
 	@echo "  make dev-web            Run Angular web frontend locally"
@@ -20,9 +19,13 @@ help:
 	@echo "  make test-permissions   Run live MQTT script proving topic isolation and auth"
 	@echo "  make clean              Clean docker volumes and temporary files"
 
-up: infra
+up:
+	./start.sh
 
 infra:
+	./start.sh --infra
+
+apps:
 	./start.sh
 
 down:
@@ -30,9 +33,6 @@ down:
 
 logs:
 	docker compose logs -f
-
-apps:
-	docker compose --profile apps up -d --build
 
 dev-api:
 	cd apps/api && go run cmd/api/main.go

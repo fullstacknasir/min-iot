@@ -1,59 +1,59 @@
 <div class="space-y-6">
   <!-- Stats Cards Section -->
   <section class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-    <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg backdrop-blur">
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-lg backdrop-blur">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Devices</span>
-        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400">
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Devices</span>
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-400">
           <mat-icon class="text-sm">devices</mat-icon>
         </div>
       </div>
-      <div class="mt-3 text-2xl font-bold tracking-tight text-white">{{ totalCount() }}</div>
+      <div class="mt-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{{ totalCount() }}</div>
     </div>
 
-    <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg backdrop-blur">
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-lg backdrop-blur">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Online</span>
-        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Online</span>
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
           <mat-icon class="text-sm">check_circle</mat-icon>
         </div>
       </div>
-      <div class="mt-3 text-2xl font-bold tracking-tight text-emerald-400">{{ onlineCount() }}</div>
+      <div class="mt-3 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">{{ onlineCount() }}</div>
     </div>
 
-    <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg backdrop-blur">
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-lg backdrop-blur">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Offline</span>
-        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-700/50 text-slate-400">
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Offline</span>
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-400">
           <mat-icon class="text-sm">cloud_off</mat-icon>
         </div>
       </div>
-      <div class="mt-3 text-2xl font-bold tracking-tight text-slate-300">{{ offlineCount() }}</div>
+      <div class="mt-3 text-2xl font-bold tracking-tight text-slate-700 dark:text-slate-300">{{ offlineCount() }}</div>
     </div>
 
-    <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg backdrop-blur">
+    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-lg backdrop-blur">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Disabled / Revoked</span>
-        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400">
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Disabled</span>
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
           <mat-icon class="text-sm">block</mat-icon>
         </div>
       </div>
-      <div class="mt-3 text-2xl font-bold tracking-tight text-amber-400">{{ disabledCount() }}</div>
+      <div class="mt-3 text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400">{{ disabledCount() }}</div>
     </div>
   </section>
 
   <!-- Filter & Search Bar Section -->
-  <section class="flex flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+  <section class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between">
     <div class="relative flex-1 max-w-md">
-      <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500">
+      <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 dark:text-slate-500">
         <mat-icon class="text-sm">search</mat-icon>
       </span>
       <input
         type="text"
         [value]="searchQuery()"
-        (input)="searchQuery.set($any($event.target).value)"
+        (input)="onSearchInput($event)"
         placeholder="Filter by device name, ID, or type..."
-        class="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 pl-9 pr-4 text-xs text-white placeholder-slate-500 transition-colors focus:border-cyan-500 focus:outline-none"
+        class="w-full rounded-xl border border-slate-300 bg-slate-50 py-2 pl-9 pr-4 text-xs text-slate-900 placeholder-slate-400 transition-colors focus:border-cyan-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:placeholder-slate-500 dark:focus:bg-slate-950"
       />
     </div>
 
@@ -64,8 +64,10 @@
         class="rounded-xl px-3 py-1.5 text-xs font-medium transition-colors"
         [class.bg-cyan-600]="filterStatus() === 'all'"
         [class.text-white]="filterStatus() === 'all'"
-        [class.bg-slate-800]="filterStatus() !== 'all'"
-        [class.text-slate-400]="filterStatus() !== 'all'"
+        [class.bg-slate-100]="filterStatus() !== 'all'"
+        [class.text-slate-600]="filterStatus() !== 'all'"
+        [class.dark:bg-slate-800]="filterStatus() !== 'all'"
+        [class.dark:text-slate-400]="filterStatus() !== 'all'"
       >
         All ({{ totalCount() }})
       </button>
@@ -75,8 +77,10 @@
         class="rounded-xl px-3 py-1.5 text-xs font-medium transition-colors"
         [class.bg-emerald-600]="filterStatus() === 'online'"
         [class.text-white]="filterStatus() === 'online'"
-        [class.bg-slate-800]="filterStatus() !== 'online'"
-        [class.text-slate-400]="filterStatus() !== 'online'"
+        [class.bg-slate-100]="filterStatus() !== 'online'"
+        [class.text-slate-600]="filterStatus() !== 'online'"
+        [class.dark:bg-slate-800]="filterStatus() !== 'online'"
+        [class.dark:text-slate-400]="filterStatus() !== 'online'"
       >
         Online ({{ onlineCount() }})
       </button>
@@ -84,10 +88,12 @@
         type="button"
         (click)="setFilter('offline')"
         class="rounded-xl px-3 py-1.5 text-xs font-medium transition-colors"
-        [class.bg-slate-700]="filterStatus() === 'offline'"
+        [class.bg-slate-600]="filterStatus() === 'offline'"
         [class.text-white]="filterStatus() === 'offline'"
-        [class.bg-slate-800]="filterStatus() !== 'offline'"
-        [class.text-slate-400]="filterStatus() !== 'offline'"
+        [class.bg-slate-100]="filterStatus() !== 'offline'"
+        [class.text-slate-600]="filterStatus() !== 'offline'"
+        [class.dark:bg-slate-800]="filterStatus() !== 'offline'"
+        [class.dark:text-slate-400]="filterStatus() !== 'offline'"
       >
         Offline ({{ offlineCount() }})
       </button>
@@ -97,8 +103,10 @@
         class="rounded-xl px-3 py-1.5 text-xs font-medium transition-colors"
         [class.bg-amber-600]="filterStatus() === 'disabled'"
         [class.text-white]="filterStatus() === 'disabled'"
-        [class.bg-slate-800]="filterStatus() !== 'disabled'"
-        [class.text-slate-400]="filterStatus() !== 'disabled'"
+        [class.bg-slate-100]="filterStatus() !== 'disabled'"
+        [class.text-slate-600]="filterStatus() !== 'disabled'"
+        [class.dark:bg-slate-800]="filterStatus() !== 'disabled'"
+        [class.dark:text-slate-400]="filterStatus() !== 'disabled'"
       >
         Disabled
       </button>
@@ -108,7 +116,7 @@
   <!-- Device Cards Fleet Section -->
   <section class="space-y-4">
     <div *ngIf="devicesQuery.isLoading()" class="flex items-center justify-center py-16">
-      <div class="flex items-center gap-2 text-sm text-cyan-400">
+      <div class="flex items-center gap-2 text-sm text-cyan-600 dark:text-cyan-400">
         <mat-icon class="animate-spin text-base">sync</mat-icon>
         <span>Loading IoT device fleet via TanStack Query...</span>
       </div>
@@ -116,18 +124,18 @@
 
     <div *ngIf="!devicesQuery.isLoading() && filteredDevices().length > 0" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <div
-        *ngFor="let device of filteredDevices()"
+        *ngFor="let device of paginatedDevices()"
         (click)="navigateToDevice(device.id)"
-        class="group relative cursor-pointer overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-500/50 hover:bg-slate-800/80"
+        class="group relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-500/50 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-lg dark:hover:bg-slate-800/80"
       >
         <header class="flex items-start justify-between gap-3">
           <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/20">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100 dark:bg-cyan-500/10 dark:text-cyan-400 dark:group-hover:bg-cyan-500/20">
               <mat-icon class="text-base">router</mat-icon>
             </div>
             <div>
-              <div class="font-semibold text-white group-hover:text-cyan-300">{{ device.name }}</div>
-              <div class="font-mono text-xs text-slate-500">{{ device.id }}</div>
+              <div class="font-semibold text-slate-900 group-hover:text-cyan-600 dark:text-white dark:group-hover:text-cyan-300">{{ device.name }}</div>
+              <div class="font-mono text-xs text-slate-400 dark:text-slate-500">{{ device.id }}</div>
             </div>
           </div>
 
@@ -138,32 +146,42 @@
           >
             <span
               class="h-1.5 w-1.5 rounded-full"
-              [class.bg-emerald-400]="device.status === 'online'"
+              [class.bg-emerald-500]="device.status === 'online'"
               [class.animate-pulse]="device.status === 'online'"
               [class.bg-slate-400]="device.status === 'offline'"
-              [class.bg-amber-400]="device.status === 'disabled'"
-              [class.bg-red-400]="device.status === 'revoked'"
+              [class.bg-amber-500]="device.status === 'disabled'"
+              [class.bg-red-500]="device.status === 'revoked'"
             ></span>
             {{ device.status }}
           </span>
         </header>
 
-        <main class="mt-4 border-t border-slate-800/80 pt-3">
+        <main class="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800/80">
           <div class="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <span class="text-slate-500">Type:</span>
-              <span class="ml-1 font-medium capitalize text-slate-300">{{ device.device_type }}</span>
+              <span class="text-slate-400">Type:</span>
+              <span class="ml-1 font-medium capitalize text-slate-700 dark:text-slate-300">{{ device.device_type }}</span>
             </div>
             <div>
-              <span class="text-slate-500">Last Seen:</span>
-              <span class="ml-1 font-medium text-slate-300">{{ device.last_seen | momentDate : 'fromNow' }}</span>
+              <span class="text-slate-400">Last Seen:</span>
+              <span class="ml-1 font-medium text-slate-700 dark:text-slate-300">{{ device.last_seen | momentDate : 'fromNow' }}</span>
             </div>
+          </div>
+
+          <!-- Assigned User Info Pill -->
+          <div class="mt-2.5 flex items-center gap-1.5 text-xs">
+            <span class="text-slate-400">Assigned:</span>
+            <span *ngIf="device.assigned_user_email" class="inline-flex items-center gap-1 rounded-md bg-cyan-50 px-2 py-0.5 font-medium text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400">
+              <mat-icon class="text-[12px]">person</mat-icon>
+              <span class="truncate max-w-[150px]">{{ device.assigned_user_email }}</span>
+            </span>
+            <span *ngIf="!device.assigned_user_email" class="italic text-slate-400 dark:text-slate-500">Unassigned</span>
           </div>
         </main>
 
-        <footer class="mt-4 flex items-center justify-between border-t border-slate-800/60 pt-3 text-xs text-slate-400">
+        <footer class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800/60 dark:text-slate-400">
           <span>Registered: {{ device.created_at | momentDate : 'YYYY-MM-DD' }}</span>
-          <span class="flex items-center gap-1 font-medium text-cyan-400 group-hover:translate-x-1 transition-transform">
+          <span class="flex items-center gap-1 font-medium text-cyan-600 group-hover:translate-x-1 transition-transform dark:text-cyan-400">
             <span>View Telemetry</span>
             <mat-icon class="text-xs">arrow_forward</mat-icon>
           </span>
@@ -171,11 +189,23 @@
       </div>
     </div>
 
+    <!-- Fleet Pagination Controls -->
+    <app-pagination
+      *ngIf="!devicesQuery.isLoading() && totalFiltered() > 0"
+      [page]="currentPage()"
+      [pageSize]="pageSize()"
+      [total]="totalFiltered()"
+      [totalPages]="totalPages()"
+      [pageSizeOptions]="pageSizeOptions"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"
+    ></app-pagination>
+
     <!-- Empty State -->
-    <div *ngIf="!devicesQuery.isLoading() && filteredDevices().length === 0" class="flex flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/50 py-16 text-center">
-      <mat-icon class="text-5xl text-slate-600">device_unknown</mat-icon>
-      <p class="mt-3 text-base font-semibold text-slate-300">No devices found</p>
-      <p class="mt-1 text-xs text-slate-500">Try adjusting your search query or status filter.</p>
+    <div *ngIf="!devicesQuery.isLoading() && filteredDevices().length === 0" class="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-16 text-center dark:border-slate-800 dark:bg-slate-900/50">
+      <mat-icon class="text-5xl text-slate-400 dark:text-slate-600">device_unknown</mat-icon>
+      <p class="mt-3 text-base font-semibold text-slate-700 dark:text-slate-300">No devices found</p>
+      <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Try adjusting your search query, or contact your administrator to assign devices to your account.</p>
     </div>
   </section>
 </div>

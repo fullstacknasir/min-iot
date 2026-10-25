@@ -20,7 +20,7 @@ func NewUserHandler(repo *repository.AuthRepository) *UserHandler {
 	return &UserHandler{repo: repo}
 }
 
-// ListUsers returns all users in the caller's organization.
+// ListUsers returns users in the caller's organization with pagination support.
 func (h *UserHandler) ListUsers(c *gin.Context) {
 	orgID := middleware.GetOrganizationID(c)
 	if orgID == "" {
@@ -28,12 +28,29 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		return
 	}
 
-	users, err := h.repo.FindUsersByOrganization(c.Request.Context(), orgID)
+	page, limit := parsePaginationParams(c)
+	users, total, err := h.repo.FindUsersByOrganization(c.Request.Context(), orgID, page, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": users, "total": len(users)})
+	if users == nil {
+		users = []models.User{}
+	}
+
+	effectiveLimit := limit
+	if effectiveLimit <= 0 {
+		effectiveLimit = total
+	}
+	totalPages := models.ComputeTotalPages(total, effectiveLimit)
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":        users,
+		"total":       total,
+		"page":        page,
+		"limit":       effectiveLimit,
+		"total_pages": totalPages,
+	})
 }
 
 type CreateOrgUserRequest struct {

@@ -1,12 +1,27 @@
+export * from './pagination.model';
 export type UserRole = 'admin' | 'operator' | 'viewer';
 
 export interface User {
   id: string;
   organization_id: string;
   email: string;
+  name?: string;
   role: UserRole;
   created_at: string;
   updated_at: string;
+}
+
+export interface UpdateProfilePayload {
+  name?: string;
+  email?: string;
+  current_password?: string;
+  new_password?: string;
+}
+
+export interface ProfileResponse {
+  message?: string;
+  user: User;
+  organization?: Organization;
 }
 
 export interface Organization {

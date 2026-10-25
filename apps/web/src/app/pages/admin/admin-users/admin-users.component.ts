@@ -2,6 +2,11 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { UserService } from '../../../core/services/user.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { User, UserRole, CreateOrgUserPayload } from '../../../core/models/auth.model';
+import {
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_LIMIT,
+  PAGE_SIZE_OPTIONS,
+} from '../../../core/constants/app.constants';
 
 @Component({
   selector: 'app-admin-users',
@@ -16,6 +21,12 @@ export class AdminUsersComponent implements OnInit {
   public readonly isLoading = signal<boolean>(false);
   public readonly showCreateModal = signal<boolean>(false);
 
+  public readonly currentPage = signal<number>(DEFAULT_PAGE);
+  public readonly pageSize = signal<number>(DEFAULT_PAGE_LIMIT);
+  public readonly totalCount = signal<number>(0);
+  public readonly totalPages = signal<number>(1);
+  public readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
+
   public newUserEmail = '';
   public newUserPassword = '';
   public newUserRole: UserRole = 'viewer';
@@ -25,15 +36,28 @@ export class AdminUsersComponent implements OnInit {
     this.loadUsers();
   }
 
-  public loadUsers(): void {
+  public loadUsers(page = this.currentPage(), limit = this.pageSize()): void {
     this.isLoading.set(true);
-    this.userService.getUsers().subscribe({
-      next: (list) => {
-        this.users.set(list);
+    this.userService.getPaginatedUsers({ page, limit }).subscribe({
+      next: (res) => {
+        this.users.set(res?.data ?? []);
+        this.totalCount.set(res?.total ?? 0);
+        this.currentPage.set(res?.page ?? page);
+        this.pageSize.set(res?.limit ?? limit);
+        this.totalPages.set(res?.total_pages ?? 1);
         this.isLoading.set(false);
       },
       error: () => this.isLoading.set(false),
     });
+  }
+
+  public onPageChange(newPage: number): void {
+    this.loadUsers(newPage, this.pageSize());
+  }
+
+  public onPageSizeChange(newSize: number): void {
+    this.pageSize.set(newSize);
+    this.loadUsers(DEFAULT_PAGE, newSize);
   }
 
   public openCreateModal(): void {

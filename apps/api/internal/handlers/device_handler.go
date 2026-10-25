@@ -21,7 +21,7 @@ func NewDeviceHandler(repo *repository.DeviceRepository) *DeviceHandler {
 	return &DeviceHandler{repo: repo}
 }
 
-// ListDevices returns all devices strictly scoped to caller's organization.
+// ListDevices returns devices scoped to caller's organization and assignment with pagination support.
 func (h *DeviceHandler) ListDevices(c *gin.Context) {
 	orgID := middleware.GetOrganizationID(c)
 	if orgID == "" {
@@ -29,7 +29,12 @@ func (h *DeviceHandler) ListDevices(c *gin.Context) {
 		return
 	}
 
-	devices, err := h.repo.FindAll(c.Request.Context(), orgID)
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	allDevices := c.Query("all") == "true"
+
+	page, limit := parsePaginationParams(c)
+	devices, total, err := h.repo.FindAll(c.Request.Context(), orgID, userID, role, allDevices, page, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -37,7 +42,20 @@ func (h *DeviceHandler) ListDevices(c *gin.Context) {
 	if devices == nil {
 		devices = []models.Device{}
 	}
-	c.JSON(http.StatusOK, gin.H{"data": devices, "total": len(devices)})
+
+	effectiveLimit := limit
+	if effectiveLimit <= 0 {
+		effectiveLimit = total
+	}
+	totalPages := models.ComputeTotalPages(total, effectiveLimit)
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":        devices,
+		"total":       total,
+		"page":        page,
+		"limit":       effectiveLimit,
+		"total_pages": totalPages,
+	})
 }
 
 // GetDevice returns details for a device within caller's organization.
@@ -85,6 +103,7 @@ func (h *DeviceHandler) CreateDevice(c *gin.Context) {
 		Name:           req.Name,
 		DeviceType:     req.DeviceType,
 		Metadata:       req.Metadata,
+		AssignedUserID: req.AssignedUserID,
 	}
 
 	if err := h.repo.Create(c.Request.Context(), &device); err != nil {

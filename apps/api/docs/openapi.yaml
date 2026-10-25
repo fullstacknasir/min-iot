@@ -521,6 +521,238 @@ paths:
         '202':
           description: Telemetry accepted for ingestion
 
+  /api/v1/rules:
+    get:
+      summary: List evaluation rules
+      tags: [Rules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of rules
+    post:
+      summary: Create evaluation rule
+      tags: [Rules]
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: Rule created
+
+  /api/v1/rules/{id}:
+    get:
+      summary: Get rule details
+      tags: [Rules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Rule details
+    put:
+      summary: Update rule
+      tags: [Rules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Rule updated
+    delete:
+      summary: Delete rule
+      tags: [Rules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Rule deleted
+
+  /api/v1/rules/{id}/toggle:
+    patch:
+      summary: Toggle rule active state
+      tags: [Rules]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Rule toggled
+
+  /api/v1/alerts:
+    get:
+      summary: List alerts with filtering and pagination
+      tags: [Alerts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [all, active, acknowledged, resolved]
+        - in: query
+          name: severity
+          schema:
+            type: string
+            enum: [all, critical, warning, info]
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated alerts
+
+  /api/v1/alerts/{id}:
+    get:
+      summary: Get alert details
+      tags: [Alerts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Alert details
+
+  /api/v1/alerts/{id}/acknowledge:
+    post:
+      summary: Acknowledge alert
+      tags: [Alerts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Alert acknowledged
+
+  /api/v1/alerts/{id}/resolve:
+    post:
+      summary: Resolve alert
+      tags: [Alerts]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Alert resolved
+
+  /api/v1/notifications:
+    get:
+      summary: List notifications
+      tags: [Notifications]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated notifications
+
+  /api/v1/notifications/unread-count:
+    get:
+      summary: Get unread notification badge count
+      tags: [Notifications]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Unread counter
+
+  /api/v1/notifications/{id}/read:
+    patch:
+      summary: Mark notification as read
+      tags: [Notifications]
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification marked read
+
+  /api/v1/notifications/read-all:
+    post:
+      summary: Mark all notifications as read
+      tags: [Notifications]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: All notifications marked read
+
+  /api/v1/notifications/live:
+    get:
+      summary: Live Server-Sent Events stream for real-time notifications and alerts
+      tags: [Notifications]
+      parameters:
+        - in: query
+          name: token
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SSE stream
+
 components:
   securitySchemes:
     BearerAuth:

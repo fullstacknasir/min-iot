@@ -36,7 +36,7 @@ func GenerateAccessToken(secret string, user *models.User, ttl time.Duration) (s
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 			IssuedAt:  jwt.NewNumericDate(now),
-			NotBefore: jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now.Add(-1 * time.Minute)),
 			Issuer:    JWTIssuer,
 		},
 	}
@@ -56,7 +56,7 @@ func ValidateAccessToken(secret, tokenString string) (*Claims, error) {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(secret), nil
-	})
+	}, jwt.WithLeeway(1*time.Minute))
 
 	if err != nil {
 		return nil, fmt.Errorf("invalid token: %w", err)

@@ -11,7 +11,15 @@ import {
   ROLE_ADMIN,
   ROLE_OPERATOR,
 } from '../constants/app.constants';
-import { AuthResponse, LoginPayload, RefreshTokenPayload, User, Organization } from '../models/auth.model';
+import {
+  AuthResponse,
+  LoginPayload,
+  RefreshTokenPayload,
+  User,
+  Organization,
+  UpdateProfilePayload,
+  ProfileResponse,
+} from '../models/auth.model';
 
 @Injectable({
   providedIn: 'root',
@@ -75,6 +83,31 @@ export class AuthService {
       });
     }
     this.clearSessionAndRedirect();
+  }
+
+  /**
+   * Fetches current authenticated user profile from server.
+   */
+  public getProfile(): Observable<ProfileResponse> {
+    return this.httpClient.get<ProfileResponse>(`${this.authBaseUrl}/me`);
+  }
+
+  /**
+   * Updates user profile attributes and synchronizes local state.
+   */
+  public updateProfile(payload: UpdateProfilePayload): Observable<ProfileResponse> {
+    return this.httpClient.put<ProfileResponse>(`${this.authBaseUrl}/me`, payload).pipe(
+      tap((res) => {
+        if (res?.user) {
+          this.setStorageItem(STORAGE_USER_KEY, JSON.stringify(res.user));
+          this.currentUser.set(res.user);
+        }
+        if (res?.organization) {
+          this.setStorageItem(STORAGE_ORG_KEY, JSON.stringify(res.organization));
+          this.currentOrg.set(res.organization);
+        }
+      })
+    );
   }
 
   public getRawAccessToken(): string | null {

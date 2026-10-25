@@ -1,0 +1,45 @@
+<section class="flex flex-col h-full justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900/80">
+  <!-- Widget Header -->
+  <header class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80">
+    <div class="flex items-center gap-2.5">
+      <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-400">
+        <mat-icon class="text-base">{{ getResolvedIcon() }}</mat-icon>
+      </div>
+      <div>
+        <div class="text-xs font-bold text-slate-900 dark:text-white truncate">
+          {{ title || (metricName + ' Display') }}
+        </div>
+        <div class="text-[10px] text-slate-400 font-mono truncate">
+          {{ deviceId }} &bull; {{ metricName }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Live indicator -->
+    <div class="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold dark:border-slate-800 dark:bg-slate-950">
+      <span class="h-1.5 w-1.5 rounded-full" [class.bg-emerald-500]="isConnected()" [class.bg-slate-400]="!isConnected()"></span>
+      <span class="text-slate-600 dark:text-slate-400">{{ isConnected() ? 'Live' : 'Cached' }}</span>
+    </div>
+  </header>
+
+  <!-- Big Digital Value Area -->
+  <main class="flex flex-col items-center justify-center py-6">
+    <div class="flex items-baseline gap-2">
+      <div class="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono">
+        {{ currentValue() }}
+      </div>
+      <div *ngIf="getResolvedUnit()" class="text-base font-bold text-cyan-600 dark:text-cyan-400">
+        {{ getResolvedUnit() }}
+      </div>
+    </div>
+    <div class="mt-1 text-xs text-slate-400 dark:text-slate-500 capitalize">
+      {{ metricName }}
+    </div>
+  </main>
+
+  <!-- Widget Footer -->
+  <footer class="flex items-center justify-between pt-3 border-t border-slate-100 text-[10px] text-slate-400 dark:border-slate-800/80">
+    <span class="font-medium text-slate-500 dark:text-slate-400">Telemetry KPI Card</span>
+    <span>Updated: {{ lastReceivedTime() || 'Waiting...' }}</span>
+  </footer>
+</section>

@@ -1,0 +1,56 @@
+<section class="relative flex h-full min-h-[180px] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs transition-all dark:border-slate-800 dark:bg-slate-900">
+  <!-- Widget Status & Header Strip -->
+  <header *ngIf="activeWidget() || isConnected()" class="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-4 py-2.5 text-xs dark:border-slate-800/80 dark:bg-slate-950/40">
+    <div class="flex items-center gap-2">
+      <mat-icon class="text-sm text-cyan-500">extension</mat-icon>
+      <span class="font-semibold text-slate-800 dark:text-slate-200">
+        {{ activeWidget()?.name ?? 'Custom Widget Sandbox' }}
+      </span>
+      <span *ngIf="activeWidget()?.widget_type" class="rounded bg-cyan-100 px-1.5 py-0.5 text-[10px] font-medium text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300">
+        {{ activeWidget()?.widget_type }}
+      </span>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Live Indicator -->
+      <div *ngIf="deviceId" class="flex items-center gap-1.5 text-[11px]">
+        <span
+          class="h-2 w-2 rounded-full"
+          [class.bg-emerald-500]="isConnected()"
+          [class.bg-slate-400]="!isConnected()"
+          [class.animate-pulse]="isConnected()"
+        ></span>
+        <span class="text-slate-500 dark:text-slate-400">
+          {{ isConnected() ? 'Live' : 'Polling' }}
+        </span>
+      </div>
+
+      <!-- Last Updated -->
+      <div *ngIf="lastReceivedTime()" class="hidden sm:flex items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500">
+        <mat-icon class="text-xs">access_time</mat-icon>
+        <span>{{ lastReceivedTime() }}</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Error Banner -->
+  <aside *ngIf="executionError()" class="border-b border-red-200 bg-red-50 p-3 text-xs text-red-600 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
+    <div class="flex items-start gap-2">
+      <mat-icon class="text-sm shrink-0">error_outline</mat-icon>
+      <div class="break-all font-mono text-[11px]">{{ executionError() }}</div>
+    </div>
+  </aside>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="flex flex-1 items-center justify-center py-12">
+    <div class="flex items-center gap-2 text-xs text-slate-400">
+      <mat-icon class="animate-spin text-sm">sync</mat-icon>
+      <span>Initializing ThingsBoard Custom Widget...</span>
+    </div>
+  </div>
+
+  <!-- Main Dynamic Widget Content Host -->
+  <main class="relative flex-1 p-3">
+    <div #widgetHost class="h-full w-full"></div>
+  </main>
+</section>

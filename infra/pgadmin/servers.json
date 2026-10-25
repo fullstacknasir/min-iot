@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "minIoT TimescaleDB (PostgreSQL)",
+      "Group": "minIoT Servers",
+      "Host": "timescaledb",
+      "Port": 5432,
+      "MaintenanceDB": "miniot",
+      "Username": "postgres",
+      "SSLMode": "prefer"
+    }
+  }
+}

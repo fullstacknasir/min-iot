@@ -225,26 +225,62 @@ Interactive OpenAPI documentation & Swagger UI is available at **`http://localho
 | `POST` | `/api/v1/users` | `admin` | Invite new user with specific role |
 | `PATCH` | `/api/v1/users/:id/role` | `admin` | Change user role (`admin`, `operator`, `viewer`) |
 | `DELETE` | `/api/v1/users/:id` | `admin` | Remove user from organization |
+| `GET` | `/api/v1/rules` | `viewer`, `operator`, `admin` | List evaluation rules with pagination |
+| `POST` | `/api/v1/rules` | `operator`, `admin` | Create metric evaluation rule |
+| `GET` | `/api/v1/rules/:id` | `viewer`, `operator`, `admin` | Get rule details |
+| `PUT` | `/api/v1/rules/:id` | `operator`, `admin` | Update rule parameters |
+| `PATCH` | `/api/v1/rules/:id/toggle` | `operator`, `admin` | Enable or disable rule evaluation |
+| `DELETE` | `/api/v1/rules/:id` | `operator`, `admin` | Delete rule |
+| `GET` | `/api/v1/alerts` | `viewer`, `operator`, `admin` | List alerts (filter by status, severity, device) |
+| `GET` | `/api/v1/alerts/:id` | `viewer`, `operator`, `admin` | Get alert details |
+| `POST` | `/api/v1/alerts/:id/acknowledge` | `operator`, `admin` | Acknowledge active alert |
+| `POST` | `/api/v1/alerts/:id/resolve` | `operator`, `admin` | Resolve alert |
+| `GET` | `/api/v1/notifications` | Authenticated | List user / org notifications |
+| `GET` | `/api/v1/notifications/unread-count` | Authenticated | Get unread notification badge count |
+| `PATCH` | `/api/v1/notifications/:id/read` | Authenticated | Mark individual notification as read |
+| `POST` | `/api/v1/notifications/read-all` | Authenticated | Mark all notifications as read |
+| `GET` | `/api/v1/notifications/live` | Authenticated | Live SSE stream for real-time alerts & notifications |
+| `GET` | `/api/v1/dashboards` | `viewer`, `operator`, `admin` | List organization dashboards |
+| `POST` | `/api/v1/dashboards` | `operator`, `admin` | Create customizable dashboard & widget canvas |
+| `GET` | `/api/v1/dashboards/:id` | `viewer`, `operator`, `admin` | Get dashboard details and widget configurations |
+| `PUT` | `/api/v1/dashboards/:id` | `operator`, `admin` | Update dashboard metadata and widget canvas layout |
+| `DELETE` | `/api/v1/dashboards/:id` | `operator`, `admin` | Delete dashboard |
+| `POST` | `/api/v1/dashboards/:id/default` | `operator`, `admin` | Set as organization's default dashboard |
 
 ---
 
 ## 🚀 Quickstart & Commands
 
-### 1. Launch Infrastructure
+### 1. Single Entrypoint Docker Deployment (Full Stack)
+Deploy all infrastructure and application services with one single command:
 ```bash
 ./start.sh
-# Or directly:
-docker compose up -d timescaledb redis emqx
+# Or via Makefile:
+make up
+```
+This builds and starts the entire minIoT platform in Docker:
+- **Web Frontend Dashboard**: `http://localhost:4200`
+- **Backend REST API & Swagger**: `http://localhost:8080` (Docs: `/docs`, Health: `/health`)
+- **PostgreSQL / TimescaleDB**: `localhost:5432` (Database: `miniot`, User: `postgres`)
+- **pgAdmin 4 (sysadmin4)**: `http://localhost:5050` (Auto-connected to TimescaleDB)
+- **Redis 7 Cache**: `localhost:6379`
+- **EMQX 5 MQTT Broker**: `localhost:1883` (WebSocket: `8083`, SSL: `8883`)
+- **EMQX Web Dashboard**: `http://localhost:18083` (`admin` / `public`)
+- **MQTT Telemetry Ingestor**: Background worker listening on `devices/+/telemetry`
+
+To start **infrastructure only** (TimescaleDB, Redis, EMQX, pgAdmin 4) for local code development:
+```bash
+./start.sh --infra
+# Or via Makefile:
+make infra
 ```
 
-### 2. Seed Default Organization & Admin
-```bash
-make seed
-```
-Default credentials:
-- **Email**: `admin@miniot.io`
-- **Password**: `AdminPassword123!`
-- **Organization**: `Acme IoT Corporation` (`org-default-001`)
+### 2. Default Credentials
+The database automatically auto-seeds the default tenant and admin user on first launch:
+- **minIoT Platform Admin**: `admin@miniot.io` / `AdminPassword123!`
+- **pgAdmin 4 Web Console**: `admin@miniot.io` / `admin` (Runs in instant desktop mode)
+- **EMQX MQTT Dashboard**: `admin` / `public`
+- **Default Organization**: `Acme IoT Corporation` (`org-default-001`)
 
 ### 3. Run Monorepo Test Suite
 ```bash

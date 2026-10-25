@@ -9,6 +9,8 @@ import {
   ProvisionResponse,
   DeviceCredential,
   DeviceStatusActionResponse,
+  PaginationParams,
+  PaginatedResponse,
 } from '../models/device.model';
 
 @Injectable({
@@ -18,10 +20,16 @@ export class DeviceService {
   private readonly httpClient = inject(HttpClient);
   private readonly baseUrl = `${DEFAULT_API_BASE_URL}/devices`;
 
-  public getDevices(): Observable<Device[]> {
+  public getDevices(options?: PaginationParams): Observable<Device[]> {
+    const query = this.buildQueryParams(options);
     return this.httpClient
-      .get<{ data: Device[]; total: number }>(this.baseUrl)
+      .get<PaginatedResponse<Device>>(`${this.baseUrl}${query}`)
       .pipe(map((res) => res?.data ?? []));
+  }
+
+  public getPaginatedDevices(options?: PaginationParams): Observable<PaginatedResponse<Device>> {
+    const query = this.buildQueryParams(options);
+    return this.httpClient.get<PaginatedResponse<Device>>(`${this.baseUrl}${query}`);
   }
 
   public getDevice(deviceId: string): Observable<Device> {
@@ -66,5 +74,14 @@ export class DeviceService {
 
   public revokeDevice(deviceId: string): Observable<DeviceStatusActionResponse> {
     return this.httpClient.post<DeviceStatusActionResponse>(`${this.baseUrl}/${deviceId}/revoke`, {});
+  }
+
+  private buildQueryParams(options?: PaginationParams): string {
+    if (!options) return '';
+    const queryParts: string[] = [];
+    if (options.all) queryParts.push('all=true');
+    if (options.page) queryParts.push(`page=${options.page}`);
+    if (options.limit) queryParts.push(`limit=${options.limit}`);
+    return queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
   }
 }

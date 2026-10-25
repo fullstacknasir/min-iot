@@ -1,26 +1,27 @@
-<section class="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 shadow-xl backdrop-blur">
-  <header class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+<section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm backdrop-blur dark:border-slate-800 dark:bg-slate-900/90 dark:shadow-xl">
+  <header class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4 dark:border-slate-800">
     <div class="flex items-center gap-3">
-      <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400">
+      <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
         <mat-icon>show_chart</mat-icon>
       </div>
       <div>
-        <p class="text-base font-semibold text-white">Historical Telemetry Trends</p>
-        <p class="text-xs text-slate-400">TimescaleDB Hypertable Analytics & Apache ECharts</p>
+        <p class="text-base font-semibold text-slate-900 dark:text-white">Historical Telemetry Trends</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400">TimescaleDB Hypertable Analytics & Apache ECharts</p>
       </div>
     </div>
 
     <!-- Controls: Metric filter & Time-range selector -->
     <div class="flex flex-wrap items-center gap-2">
       <!-- Metric filter if multiple metrics available -->
-      <div *ngIf="availableMetrics().length > 1" class="flex items-center gap-1 rounded-xl bg-slate-800/80 p-1 border border-slate-700/60">
+      <div *ngIf="availableMetrics().length > 1" class="flex items-center gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200 dark:border-slate-700/60 dark:bg-slate-800/80">
         <button
           type="button"
           (click)="setMetricFilter('all')"
           class="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
           [class.bg-indigo-600]="selectedMetric() === 'all'"
           [class.text-white]="selectedMetric() === 'all'"
-          [class.text-slate-400]="selectedMetric() !== 'all'"
+          [class.text-slate-600]="selectedMetric() !== 'all'"
+          [class.dark:text-slate-400]="selectedMetric() !== 'all'"
         >
           All
         </button>
@@ -31,14 +32,15 @@
           class="rounded-lg px-2.5 py-1 text-xs font-medium capitalize transition-colors"
           [class.bg-indigo-600]="selectedMetric() === m"
           [class.text-white]="selectedMetric() === m"
-          [class.text-slate-400]="selectedMetric() !== m"
+          [class.text-slate-600]="selectedMetric() !== m"
+          [class.dark:text-slate-400]="selectedMetric() !== m"
         >
           {{ m }}
         </button>
       </div>
 
       <!-- Time range buttons -->
-      <div class="flex items-center gap-1 rounded-xl bg-slate-800/80 p-1 border border-slate-700/60">
+      <div class="flex items-center gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200 dark:border-slate-700/60 dark:bg-slate-800/80">
         <button
           *ngFor="let r of timeRanges"
           type="button"
@@ -46,7 +48,8 @@
           class="rounded-lg px-2.5 py-1 text-xs font-medium transition-colors"
           [class.bg-cyan-600]="selectedRange() === r.value"
           [class.text-white]="selectedRange() === r.value"
-          [class.text-slate-400]="selectedRange() !== r.value"
+          [class.text-slate-600]="selectedRange() !== r.value"
+          [class.dark:text-slate-400]="selectedRange() !== r.value"
         >
           {{ r.value }}
         </button>
@@ -55,8 +58,8 @@
   </header>
 
   <main class="relative mt-4">
-    <div *ngIf="isLoading()" class="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
-      <div class="flex items-center gap-2 text-sm text-cyan-400">
+    <div *ngIf="isLoading()" class="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm dark:bg-slate-900/60">
+      <div class="flex items-center gap-2 text-sm text-cyan-600 dark:text-cyan-400">
         <mat-icon class="animate-spin">sync</mat-icon>
         <span>Loading historical metrics...</span>
       </div>

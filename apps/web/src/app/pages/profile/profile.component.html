@@ -1,0 +1,166 @@
+<div class="space-y-6">
+  <!-- Profile Page Header -->
+  <header class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 text-xl font-bold text-white shadow-lg shadow-cyan-500/20">
+        {{ (user()?.name || user()?.email || 'U').substring(0, 1).toUpperCase() }}
+      </div>
+      <div>
+        <div class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+          {{ user()?.name || 'User Profile' }}
+        </div>
+        <div class="flex items-center gap-2 mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+          <span>{{ user()?.email }}</span>
+          <span>&bull;</span>
+          <span class="rounded-md bg-cyan-50 dark:bg-cyan-500/10 px-2 py-0.5 font-semibold uppercase tracking-wider text-cyan-700 dark:text-cyan-400">
+            {{ user()?.role }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Banners -->
+  <div *ngIf="successMessage()" class="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+    <mat-icon class="text-sm">check_circle</mat-icon>
+    <span>{{ successMessage() }}</span>
+  </div>
+
+  <div *ngIf="errorMessage()" class="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-xs font-medium text-red-700 dark:text-red-400">
+    <mat-icon class="text-sm">error_outline</mat-icon>
+    <span>{{ errorMessage() }}</span>
+  </div>
+
+  <main class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <!-- Account Information Overview Card -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-xl backdrop-blur">
+      <header class="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
+        <mat-icon class="text-base text-cyan-600 dark:text-cyan-400">badge</mat-icon>
+        <span class="text-sm font-bold text-slate-900 dark:text-white">Account Details</span>
+      </header>
+
+      <div class="mt-4 space-y-3.5 text-xs">
+        <div>
+          <span class="block text-slate-400 uppercase tracking-wider text-[11px] font-semibold">User ID</span>
+          <span class="font-mono text-slate-700 dark:text-slate-300">{{ user()?.id }}</span>
+        </div>
+
+        <div>
+          <span class="block text-slate-400 uppercase tracking-wider text-[11px] font-semibold">Organization</span>
+          <span class="font-medium text-slate-700 dark:text-slate-200">{{ organization()?.name || authService.currentOrg()?.name || 'Default Organization' }}</span>
+        </div>
+
+        <div>
+          <span class="block text-slate-400 uppercase tracking-wider text-[11px] font-semibold">Access Permissions</span>
+          <span class="inline-block mt-1 rounded-lg border border-slate-200 bg-slate-100 px-2.5 py-1 font-semibold uppercase text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
+            {{ user()?.role }}
+          </span>
+        </div>
+
+        <div>
+          <span class="block text-slate-400 uppercase tracking-wider text-[11px] font-semibold">Member Since</span>
+          <span class="text-slate-600 dark:text-slate-400">{{ formatMemberSince(user()?.created_at) }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Edit Profile Form Card -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-xl backdrop-blur">
+      <header class="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
+        <mat-icon class="text-base text-cyan-600 dark:text-cyan-400">person_outline</mat-icon>
+        <span class="text-sm font-bold text-slate-900 dark:text-white">Profile Information</span>
+      </header>
+
+      <form (ngSubmit)="handleSaveProfile()" class="mt-4 space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Full Name</label>
+          <input
+            type="text"
+            [(ngModel)]="editName"
+            name="editName"
+            placeholder="e.g. Nasir Khan"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 transition-colors focus:border-cyan-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:placeholder-slate-600 dark:focus:bg-slate-950"
+          />
+        </div>
+
+        <div>
+          <label class="block font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Email Address</label>
+          <input
+            type="email"
+            [(ngModel)]="editEmail"
+            name="editEmail"
+            required
+            placeholder="user@example.com"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 placeholder-slate-400 transition-colors focus:border-cyan-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:placeholder-slate-600 dark:focus:bg-slate-950"
+          />
+        </div>
+
+        <button
+          type="submit"
+          [disabled]="isSavingProfile()"
+          class="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 font-semibold text-white shadow-md shadow-cyan-600/20 transition-all hover:bg-cyan-500 disabled:opacity-50"
+        >
+          <mat-icon *ngIf="isSavingProfile()" class="animate-spin text-xs">sync</mat-icon>
+          <mat-icon *ngIf="!isSavingProfile()" class="text-xs">save</mat-icon>
+          <span>{{ isSavingProfile() ? 'Saving Changes...' : 'Save Profile Changes' }}</span>
+        </button>
+      </form>
+    </section>
+
+    <!-- Change Password Card -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-xl backdrop-blur">
+      <header class="flex items-center gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
+        <mat-icon class="text-base text-cyan-600 dark:text-cyan-400">lock_reset</mat-icon>
+        <span class="text-sm font-bold text-slate-900 dark:text-white">Security & Password</span>
+      </header>
+
+      <form (ngSubmit)="handleChangePassword()" class="mt-4 space-y-3.5 text-xs">
+        <div>
+          <label class="block font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Current Password</label>
+          <input
+            type="password"
+            [(ngModel)]="currentPassword"
+            name="currentPassword"
+            required
+            placeholder="••••••••••••"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 transition-colors focus:border-cyan-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:placeholder-slate-600 dark:focus:bg-slate-950"
+          />
+        </div>
+
+        <div>
+          <label class="block font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">New Password (Min 8 chars)</label>
+          <input
+            type="password"
+            [(ngModel)]="newPassword"
+            name="newPassword"
+            required
+            placeholder="••••••••••••"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 transition-colors focus:border-cyan-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:placeholder-slate-600 dark:focus:bg-slate-950"
+          />
+        </div>
+
+        <div>
+          <label class="block font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Confirm New Password</label>
+          <input
+            type="password"
+            [(ngModel)]="confirmPassword"
+            name="confirmPassword"
+            required
+            placeholder="••••••••••••"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 transition-colors focus:border-cyan-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white dark:placeholder-slate-600 dark:focus:bg-slate-950"
+          />
+        </div>
+
+        <button
+          type="submit"
+          [disabled]="isChangingPassword()"
+          class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 font-semibold text-white transition-all hover:bg-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:hover:bg-slate-700"
+        >
+          <mat-icon *ngIf="isChangingPassword()" class="animate-spin text-xs">sync</mat-icon>
+          <mat-icon *ngIf="!isChangingPassword()" class="text-xs">key</mat-icon>
+          <span>{{ isChangingPassword() ? 'Updating Password...' : 'Update Password' }}</span>
+        </button>
+      </form>
+    </section>
+  </main>
+</div>

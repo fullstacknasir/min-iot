@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { DEFAULT_API_BASE_URL } from '../constants/app.constants';
-import { User, CreateOrgUserPayload, UserRole } from '../models/auth.model';
+import { User, CreateOrgUserPayload, UserRole, PaginationParams, PaginatedResponse } from '../models/auth.model';
 
 @Injectable({
   providedIn: 'root',
@@ -11,10 +11,16 @@ export class UserService {
   private readonly httpClient = inject(HttpClient);
   private readonly baseUrl = `${DEFAULT_API_BASE_URL}/users`;
 
-  public getUsers(): Observable<User[]> {
+  public getUsers(options?: PaginationParams): Observable<User[]> {
+    const query = this.buildQueryParams(options);
     return this.httpClient
-      .get<{ data: User[]; total: number }>(this.baseUrl)
+      .get<PaginatedResponse<User>>(`${this.baseUrl}${query}`)
       .pipe(map((res) => res?.data ?? []));
+  }
+
+  public getPaginatedUsers(options?: PaginationParams): Observable<PaginatedResponse<User>> {
+    const query = this.buildQueryParams(options);
+    return this.httpClient.get<PaginatedResponse<User>>(`${this.baseUrl}${query}`);
   }
 
   public createUser(payload: CreateOrgUserPayload): Observable<User> {
@@ -29,5 +35,14 @@ export class UserService {
 
   public deleteUser(userId: string): Observable<void> {
     return this.httpClient.delete<void>(`${this.baseUrl}/${userId}`);
+  }
+
+  private buildQueryParams(options?: PaginationParams): string {
+    if (!options) return '';
+    const queryParts: string[] = [];
+    if (options.all) queryParts.push('all=true');
+    if (options.page) queryParts.push(`page=${options.page}`);
+    if (options.limit) queryParts.push(`limit=${options.limit}`);
+    return queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
   }
 }

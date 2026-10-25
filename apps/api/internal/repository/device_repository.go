@@ -28,28 +28,88 @@ func NewDeviceRepository(pool *pgxpool.Pool) *DeviceRepository {
 	return &DeviceRepository{pool: pool}
 }
 
-// FindAll retrieves all devices strictly scoped to the user's organization.
-func (r *DeviceRepository) FindAll(ctx context.Context, organizationID string) ([]models.Device, error) {
+// FindAll retrieves devices scoped to the user's organization and user assignment with optional pagination.
+func (r *DeviceRepository) FindAll(ctx context.Context, organizationID, userID, role string, allDevices bool, page, limit int) ([]models.Device, int, error) {
 	queryCtx, cancel := context.WithTimeout(ctx, QueryTimeout)
 	defer cancel()
 
-	query := `SELECT id, organization_id, name, device_type, status, metadata, last_seen, created_at, updated_at 
-	          FROM devices WHERE organization_id = $1 ORDER BY created_at DESC`
-	rows, err := r.pool.Query(queryCtx, query, organizationID)
+	var total int
+	isAdminScope := role == models.RoleAdmin || allDevices
+
+	if isAdminScope {
+		countQuery := `SELECT COUNT(*) FROM devices WHERE organization_id = $1`
+		if err := r.pool.QueryRow(queryCtx, countQuery, organizationID).Scan(&total); err != nil {
+			return nil, 0, fmt.Errorf("failed counting devices: %w", err)
+		}
+	} else {
+		countQuery := `SELECT COUNT(*) FROM devices d 
+		               WHERE d.organization_id = $1 
+		                 AND (d.assigned_user_id = $2 OR (NOT EXISTS (SELECT 1 FROM devices WHERE organization_id = $1 AND assigned_user_id = $2) AND d.assigned_user_id IS NULL))`
+		if err := r.pool.QueryRow(queryCtx, countQuery, organizationID, userID).Scan(&total); err != nil {
+			return nil, 0, fmt.Errorf("failed counting devices: %w", err)
+		}
+	}
+
+	var rows pgx.Rows
+	var err error
+
+	if limit > 0 && page > 0 {
+		offset := (page - 1) * limit
+		if isAdminScope {
+			query := `SELECT d.id, d.organization_id, d.name, d.device_type, d.status, d.metadata, d.last_seen, 
+			                 d.assigned_user_id, u.email as assigned_user_email, d.created_at, d.updated_at 
+			          FROM devices d 
+			          LEFT JOIN users u ON d.assigned_user_id = u.id 
+			          WHERE d.organization_id = $1 
+			          ORDER BY d.created_at DESC 
+			          LIMIT $2 OFFSET $3`
+			rows, err = r.pool.Query(queryCtx, query, organizationID, limit, offset)
+		} else {
+			query := `SELECT d.id, d.organization_id, d.name, d.device_type, d.status, d.metadata, d.last_seen, 
+			                 d.assigned_user_id, u.email as assigned_user_email, d.created_at, d.updated_at 
+			          FROM devices d 
+			          LEFT JOIN users u ON d.assigned_user_id = u.id 
+			          WHERE d.organization_id = $1 
+			            AND (d.assigned_user_id = $2 OR (NOT EXISTS (SELECT 1 FROM devices WHERE organization_id = $1 AND assigned_user_id = $2) AND d.assigned_user_id IS NULL))
+			          ORDER BY d.created_at DESC 
+			          LIMIT $3 OFFSET $4`
+			rows, err = r.pool.Query(queryCtx, query, organizationID, userID, limit, offset)
+		}
+	} else {
+		if isAdminScope {
+			query := `SELECT d.id, d.organization_id, d.name, d.device_type, d.status, d.metadata, d.last_seen, 
+			                 d.assigned_user_id, u.email as assigned_user_email, d.created_at, d.updated_at 
+			          FROM devices d 
+			          LEFT JOIN users u ON d.assigned_user_id = u.id 
+			          WHERE d.organization_id = $1 
+			          ORDER BY d.created_at DESC`
+			rows, err = r.pool.Query(queryCtx, query, organizationID)
+		} else {
+			query := `SELECT d.id, d.organization_id, d.name, d.device_type, d.status, d.metadata, d.last_seen, 
+			                 d.assigned_user_id, u.email as assigned_user_email, d.created_at, d.updated_at 
+			          FROM devices d 
+			          LEFT JOIN users u ON d.assigned_user_id = u.id 
+			          WHERE d.organization_id = $1 
+			            AND (d.assigned_user_id = $2 OR (NOT EXISTS (SELECT 1 FROM devices WHERE organization_id = $1 AND assigned_user_id = $2) AND d.assigned_user_id IS NULL))
+			          ORDER BY d.created_at DESC`
+			rows, err = r.pool.Query(queryCtx, query, organizationID, userID)
+		}
+	}
+
 	if err != nil {
-		return nil, fmt.Errorf("failed querying devices: %w", err)
+		return nil, 0, fmt.Errorf("failed querying devices: %w", err)
 	}
 	defer rows.Close()
 
-	var devices []models.Device
+	devices := make([]models.Device, 0)
 	for rows.Next() {
 		d, err := scanDeviceRow(rows)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		devices = append(devices, *d)
 	}
-	return devices, nil
+	return devices, total, nil
 }
 
 // FindByID retrieves a single device by ID scoped strictly to caller's organization.
@@ -57,23 +117,21 @@ func (r *DeviceRepository) FindByID(ctx context.Context, id, organizationID stri
 	queryCtx, cancel := context.WithTimeout(ctx, QueryTimeout)
 	defer cancel()
 
-	query := `SELECT id, organization_id, name, device_type, status, metadata, last_seen, created_at, updated_at 
-	          FROM devices WHERE id = $1 AND organization_id = $2`
+	query := `SELECT d.id, d.organization_id, d.name, d.device_type, d.status, d.metadata, d.last_seen, 
+	                 d.assigned_user_id, u.email as assigned_user_email, d.created_at, d.updated_at 
+	          FROM devices d 
+	          LEFT JOIN users u ON d.assigned_user_id = u.id 
+	          WHERE d.id = $1 AND d.organization_id = $2`
 	row := r.pool.QueryRow(queryCtx, query, id, organizationID)
 
-	var d models.Device
-	var metadataBytes []byte
-	err := row.Scan(&d.ID, &d.OrganizationID, &d.Name, &d.DeviceType, &d.Status, &metadataBytes, &d.LastSeen, &d.CreatedAt, &d.UpdatedAt)
+	d, err := scanDeviceRow(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrDeviceNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
-	if len(metadataBytes) > 0 {
-		_ = json.Unmarshal(metadataBytes, &d.Metadata)
-	}
-	return &d, nil
+	return d, nil
 }
 
 // Create inserts a new device scoped to the organization.
@@ -91,9 +149,9 @@ func (r *DeviceRepository) Create(ctx context.Context, d *models.Device) error {
 	d.UpdatedAt = now
 	d.Status = models.DeviceStatusOffline
 
-	query := `INSERT INTO devices (id, organization_id, name, device_type, status, metadata, last_seen, created_at, updated_at) 
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
-	_, err := r.pool.Exec(queryCtx, query, d.ID, d.OrganizationID, d.Name, d.DeviceType, d.Status, metadataBytes, d.LastSeen, d.CreatedAt, d.UpdatedAt)
+	query := `INSERT INTO devices (id, organization_id, name, device_type, status, metadata, last_seen, assigned_user_id, created_at, updated_at) 
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+	_, err := r.pool.Exec(queryCtx, query, d.ID, d.OrganizationID, d.Name, d.DeviceType, d.Status, metadataBytes, d.LastSeen, d.AssignedUserID, d.CreatedAt, d.UpdatedAt)
 	return err
 }
 
@@ -110,13 +168,13 @@ func (r *DeviceRepository) Update(ctx context.Context, id, organizationID string
 	defer cancel()
 
 	metadataBytes, _ := json.Marshal(existing.Metadata)
-	query := `UPDATE devices SET name = $1, device_type = $2, metadata = $3, updated_at = $4 
-	          WHERE id = $5 AND organization_id = $6`
-	_, err = r.pool.Exec(queryCtx, query, existing.Name, existing.DeviceType, metadataBytes, existing.UpdatedAt, id, organizationID)
+	query := `UPDATE devices SET name = $1, device_type = $2, metadata = $3, assigned_user_id = $4, updated_at = $5 
+	          WHERE id = $6 AND organization_id = $7`
+	_, err = r.pool.Exec(queryCtx, query, existing.Name, existing.DeviceType, metadataBytes, existing.AssignedUserID, existing.UpdatedAt, id, organizationID)
 	if err != nil {
 		return nil, fmt.Errorf("failed updating device: %w", err)
 	}
-	return existing, nil
+	return r.FindByID(ctx, id, organizationID)
 }
 
 // Delete removes a device scoped to organization.
@@ -214,7 +272,7 @@ func (r *DeviceRepository) SetCredentialsStatus(ctx context.Context, deviceID, o
 func scanDeviceRow(row pgx.Row) (*models.Device, error) {
 	var d models.Device
 	var metadataBytes []byte
-	err := row.Scan(&d.ID, &d.OrganizationID, &d.Name, &d.DeviceType, &d.Status, &metadataBytes, &d.LastSeen, &d.CreatedAt, &d.UpdatedAt)
+	err := row.Scan(&d.ID, &d.OrganizationID, &d.Name, &d.DeviceType, &d.Status, &metadataBytes, &d.LastSeen, &d.AssignedUserID, &d.AssignedUserEmail, &d.CreatedAt, &d.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -233,6 +291,15 @@ func applyDeviceUpdates(device *models.Device, req *models.UpdateDeviceRequest) 
 	}
 	if req.Metadata != nil {
 		device.Metadata = req.Metadata
+	}
+	if req.ClearAssignedUser {
+		device.AssignedUserID = nil
+	} else if req.AssignedUserID != nil {
+		if *req.AssignedUserID == "" {
+			device.AssignedUserID = nil
+		} else {
+			device.AssignedUserID = req.AssignedUserID
+		}
 	}
 	device.UpdatedAt = time.Now().UTC()
 }

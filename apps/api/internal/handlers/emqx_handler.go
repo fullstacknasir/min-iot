@@ -83,7 +83,12 @@ func isSystemService(clientID, username string) bool {
 func (h *EMQXHandler) HandleEvents(c *gin.Context) {
 	var payload models.EMQXEventPayload
 	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid event payload"})
+		c.JSON(http.StatusOK, gin.H{"status": "ignored", "reason": "unrecognized payload"})
+		return
+	}
+
+	if isSystemService(payload.ClientID, payload.Username) {
+		c.JSON(http.StatusOK, gin.H{"status": "ignored", "reason": "system service"})
 		return
 	}
 

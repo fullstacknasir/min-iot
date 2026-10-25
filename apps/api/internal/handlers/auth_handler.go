@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"miniot/apps/api/internal/config"
+	"miniot/apps/api/internal/middleware"
 	"miniot/apps/api/internal/models"
 	"miniot/apps/api/internal/repository"
 	"miniot/apps/api/internal/security"
@@ -137,6 +138,91 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "successfully logged out"})
+}
+
+// GetProfile returns the profile of the currently authenticated user.
+func (h *AuthHandler) GetProfile(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	user, err := h.repo.FindUserByID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+
+	org, _ := h.repo.FindOrganizationByID(c.Request.Context(), user.OrganizationID)
+	c.JSON(http.StatusOK, gin.H{
+		"user":         user,
+		"organization": org,
+	})
+}
+
+// UpdateProfile updates the name, email, or password of the currently authenticated user.
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	var req models.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	user, err := h.repo.FindUserByID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+
+	newName := user.Name
+	if req.Name != nil {
+		newName = *req.Name
+	}
+
+	newEmail := user.Email
+	if req.Email != nil && *req.Email != "" {
+		newEmail = *req.Email
+	}
+
+	if req.NewPassword != nil && *req.NewPassword != "" {
+		if len(*req.NewPassword) < 8 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "new password must be at least 8 characters"})
+			return
+		}
+		if req.CurrentPassword == nil || !security.CheckPassword(user.PasswordHash, *req.CurrentPassword) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "current password is incorrect"})
+			return
+		}
+		newHash, err := security.HashPassword(*req.NewPassword)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+			return
+		}
+		if err := h.repo.UpdateUserPassword(c.Request.Context(), userID, newHash); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update password"})
+			return
+		}
+	}
+
+	updatedUser, err := h.repo.UpdateUserProfile(c.Request.Context(), userID, newName, newEmail)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update profile"})
+		return
+	}
+
+	org, _ := h.repo.FindOrganizationByID(c.Request.Context(), updatedUser.OrganizationID)
+	c.JSON(http.StatusOK, gin.H{
+		"message":      "profile updated successfully",
+		"user":         updatedUser,
+		"organization": org,
+	})
 }
 
 func (h *AuthHandler) resolveOrganizationAndRole(c *gin.Context, req *models.RegisterRequest) (*models.Organization, string, error) {

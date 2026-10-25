@@ -18,6 +18,7 @@ import (
 	"miniot/apps/api/internal/middleware"
 	"miniot/apps/api/internal/models"
 	"miniot/apps/api/internal/repository"
+	"miniot/apps/api/internal/rules"
 )
 
 func init() {
@@ -52,8 +53,17 @@ func setupTestApp(t *testing.T) (*gin.Engine, *database.Clients, *config.Config)
 
 	deviceRepo := repository.NewDeviceRepository(dbClients.Pool)
 	telemetryRepo := repository.NewTelemetryRepository(dbClients.Pool, dbClients.Redis)
+	ruleAlertRepo := repository.NewRuleAlertRepository(dbClients.Pool)
+	dashboardRepo := repository.NewDashboardRepository(dbClients.Pool)
+	customWidgetRepo := repository.NewCustomWidgetRepository(dbClients.Pool)
+	ruleEngine := rules.NewRuleEngine(ruleAlertRepo, deviceRepo, dbClients.Redis)
+
 	deviceHandler := handlers.NewDeviceHandler(deviceRepo)
-	telemetryHandler := handlers.NewTelemetryHandler(telemetryRepo)
+	telemetryHandler := handlers.NewTelemetryHandler(telemetryRepo).WithRuleEngine(ruleEngine)
+	userHandler := handlers.NewUserHandler(authRepo)
+	ruleAlertHandler := handlers.NewRuleAlertHandler(ruleAlertRepo, dbClients.Redis)
+	dashboardHandler := handlers.NewDashboardHandler(dashboardRepo)
+	customWidgetHandler := handlers.NewCustomWidgetHandler(customWidgetRepo)
 	emqxHandler := handlers.NewEMQXHandler(deviceRepo)
 
 	emqxGroup := router.Group("/api/v1/emqx")
@@ -67,6 +77,11 @@ func setupTestApp(t *testing.T) (*gin.Engine, *database.Clients, *config.Config)
 	protected := router.Group("/api/v1")
 	protected.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 	{
+		protected.GET("/auth/me", authHandler.GetProfile)
+		protected.PUT("/auth/me", authHandler.UpdateProfile)
+		protected.GET("/profile", authHandler.GetProfile)
+		protected.PUT("/profile", authHandler.UpdateProfile)
+
 		// Device read endpoints
 		protected.GET("/devices", deviceHandler.ListDevices)
 		protected.GET("/devices/:id", deviceHandler.GetDevice)
@@ -91,6 +106,68 @@ func setupTestApp(t *testing.T) (*gin.Engine, *database.Clients, *config.Config)
 		protected.GET("/devices/:id/telemetry/aggregates", telemetryHandler.GetAggregates)
 		protected.GET("/devices/:id/telemetry/live", telemetryHandler.StreamLiveTelemetry)
 		protected.POST("/telemetry", middleware.RequireRole(models.RoleAdmin, models.RoleOperator), telemetryHandler.IngestTelemetry)
+
+		// User management endpoints
+		users := protected.Group("/users")
+		users.Use(middleware.RequireRole(models.RoleAdmin))
+		{
+			users.GET("", userHandler.ListUsers)
+			users.POST("", userHandler.CreateUser)
+			users.PATCH("/:id/role", userHandler.UpdateUserRole)
+			users.DELETE("/:id", userHandler.DeleteUser)
+		}
+
+		// Rules endpoints
+		protected.GET("/rules", ruleAlertHandler.ListRules)
+		protected.GET("/rules/:id", ruleAlertHandler.GetRule)
+		ruleManage := protected.Group("/rules")
+		ruleManage.Use(middleware.RequireRole(models.RoleAdmin, models.RoleOperator))
+		{
+			ruleManage.POST("", ruleAlertHandler.CreateRule)
+			ruleManage.PUT("/:id", ruleAlertHandler.UpdateRule)
+			ruleManage.DELETE("/:id", ruleAlertHandler.DeleteRule)
+			ruleManage.PATCH("/:id/toggle", ruleAlertHandler.ToggleRule)
+		}
+
+		// Alerts endpoints
+		protected.GET("/alerts", ruleAlertHandler.ListAlerts)
+		protected.GET("/alerts/:id", ruleAlertHandler.GetAlert)
+		alertManage := protected.Group("/alerts")
+		alertManage.Use(middleware.RequireRole(models.RoleAdmin, models.RoleOperator))
+		{
+			alertManage.POST("/:id/acknowledge", ruleAlertHandler.AcknowledgeAlert)
+			alertManage.POST("/:id/resolve", ruleAlertHandler.ResolveAlert)
+		}
+
+		// Notifications endpoints
+		protected.GET("/notifications", ruleAlertHandler.ListNotifications)
+		protected.GET("/notifications/unread-count", ruleAlertHandler.GetUnreadCount)
+		protected.PATCH("/notifications/:id/read", ruleAlertHandler.MarkAsRead)
+		protected.POST("/notifications/read-all", ruleAlertHandler.MarkAllAsRead)
+		protected.GET("/notifications/live", ruleAlertHandler.StreamLiveNotifications)
+
+		// Dashboards endpoints
+		protected.GET("/dashboards", dashboardHandler.ListDashboards)
+		protected.GET("/dashboards/:id", dashboardHandler.GetDashboard)
+		dashManage := protected.Group("/dashboards")
+		dashManage.Use(middleware.RequireRole(models.RoleAdmin, models.RoleOperator))
+		{
+			dashManage.POST("", dashboardHandler.CreateDashboard)
+			dashManage.PUT("/:id", dashboardHandler.UpdateDashboard)
+			dashManage.DELETE("/:id", dashboardHandler.DeleteDashboard)
+			dashManage.POST("/:id/default", dashboardHandler.SetDefault)
+		}
+
+		// Custom Widgets endpoints
+		protected.GET("/custom-widgets", customWidgetHandler.ListCustomWidgets)
+		protected.GET("/custom-widgets/:id", customWidgetHandler.GetCustomWidget)
+		widgetManage := protected.Group("/custom-widgets")
+		widgetManage.Use(middleware.RequireRole(models.RoleAdmin, models.RoleOperator))
+		{
+			widgetManage.POST("", customWidgetHandler.CreateCustomWidget)
+			widgetManage.PUT("/:id", customWidgetHandler.UpdateCustomWidget)
+			widgetManage.DELETE("/:id", customWidgetHandler.DeleteCustomWidget)
+		}
 	}
 
 	router.GET("/docs", handlers.ServeDocsUI)

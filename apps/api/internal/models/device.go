@@ -16,28 +16,33 @@ const (
 )
 
 type Device struct {
-	ID             string                 `json:"id"`
-	OrganizationID string                 `json:"organization_id"`
-	Name           string                 `json:"name" binding:"required"`
-	DeviceType     string                 `json:"device_type" binding:"required"`
-	Status         string                 `json:"status"`
-	Metadata       map[string]interface{} `json:"metadata"`
-	LastSeen       *time.Time             `json:"last_seen"`
-	CreatedAt      time.Time              `json:"created_at"`
-	UpdatedAt      time.Time              `json:"updated_at"`
+	ID                string                 `json:"id"`
+	OrganizationID    string                 `json:"organization_id"`
+	Name              string                 `json:"name" binding:"required"`
+	DeviceType        string                 `json:"device_type" binding:"required"`
+	Status            string                 `json:"status"`
+	Metadata          map[string]interface{} `json:"metadata"`
+	LastSeen          *time.Time             `json:"last_seen"`
+	AssignedUserID    *string                `json:"assigned_user_id"`
+	AssignedUserEmail *string                `json:"assigned_user_email,omitempty"`
+	CreatedAt         time.Time              `json:"created_at"`
+	UpdatedAt         time.Time              `json:"updated_at"`
 }
 
 type CreateDeviceRequest struct {
-	ID         string                 `json:"id"`
-	Name       string                 `json:"name" binding:"required"`
-	DeviceType string                 `json:"device_type" binding:"required"`
-	Metadata   map[string]interface{} `json:"metadata"`
+	ID             string                 `json:"id"`
+	Name           string                 `json:"name" binding:"required"`
+	DeviceType     string                 `json:"device_type" binding:"required"`
+	Metadata       map[string]interface{} `json:"metadata"`
+	AssignedUserID *string                `json:"assigned_user_id"`
 }
 
 type UpdateDeviceRequest struct {
-	Name       *string                `json:"name"`
-	DeviceType *string                `json:"device_type"`
-	Metadata   map[string]interface{} `json:"metadata"`
+	Name              *string                `json:"name"`
+	DeviceType        *string                `json:"device_type"`
+	Metadata          map[string]interface{} `json:"metadata"`
+	AssignedUserID    *string                `json:"assigned_user_id"`
+	ClearAssignedUser bool                   `json:"clear_assigned_user"`
 }
 
 type DeviceCredential struct {
@@ -78,4 +83,16 @@ type SystemHealthResponse struct {
 	Status    string            `json:"status"`
 	Timestamp time.Time         `json:"timestamp"`
 	Services  map[string]string `json:"services"`
+}
+
+// ComputeTotalPages returns the number of pages given total items and items per page limit.
+func ComputeTotalPages(total, limit int) int {
+	if limit <= 0 || total <= 0 {
+		return 1
+	}
+	pages := total / limit
+	if total%limit != 0 {
+		pages++
+	}
+	return pages
 }

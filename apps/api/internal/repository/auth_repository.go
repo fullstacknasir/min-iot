@@ -67,9 +67,9 @@ func (r *AuthRepository) CreateUser(ctx context.Context, user *models.User) erro
 		user.ID = "usr-" + uuid.New().String()[:8]
 	}
 
-	query := `INSERT INTO users (id, organization_id, email, password_hash, role, created_at, updated_at) 
-	          VALUES ($1, $2, $3, $4, $5, $6, $7)`
-	_, err := r.pool.Exec(queryCtx, query, user.ID, user.OrganizationID, user.Email, user.PasswordHash, user.Role, user.CreatedAt, user.UpdatedAt)
+	query := `INSERT INTO users (id, organization_id, email, name, password_hash, role, created_at, updated_at) 
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+	_, err := r.pool.Exec(queryCtx, query, user.ID, user.OrganizationID, user.Email, user.Name, user.PasswordHash, user.Role, user.CreatedAt, user.UpdatedAt)
 	return err
 }
 
@@ -79,10 +79,10 @@ func (r *AuthRepository) FindUserByEmail(ctx context.Context, email string) (*mo
 	defer cancel()
 
 	var user models.User
-	query := `SELECT id, organization_id, email, password_hash, role, created_at, updated_at 
+	query := `SELECT id, organization_id, email, name, password_hash, role, created_at, updated_at 
 	          FROM users WHERE email = $1`
 	err := r.pool.QueryRow(queryCtx, query, email).Scan(
-		&user.ID, &user.OrganizationID, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &user.OrganizationID, &user.Email, &user.Name, &user.PasswordHash, &user.Role, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -96,10 +96,10 @@ func (r *AuthRepository) FindUserByID(ctx context.Context, id string) (*models.U
 	defer cancel()
 
 	var user models.User
-	query := `SELECT id, organization_id, email, password_hash, role, created_at, updated_at 
+	query := `SELECT id, organization_id, email, name, password_hash, role, created_at, updated_at 
 	          FROM users WHERE id = $1`
 	err := r.pool.QueryRow(queryCtx, query, id).Scan(
-		&user.ID, &user.OrganizationID, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &user.OrganizationID, &user.Email, &user.Name, &user.PasswordHash, &user.Role, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -167,27 +167,75 @@ func (r *AuthRepository) RevokeAllUserRefreshTokens(ctx context.Context, userID 
 }
 
 // FindUsersByOrganization retrieves all users belonging to an organization.
-func (r *AuthRepository) FindUsersByOrganization(ctx context.Context, orgID string) ([]models.User, error) {
+// FindUsersByOrganization retrieves users belonging to an organization with optional pagination.
+func (r *AuthRepository) FindUsersByOrganization(ctx context.Context, orgID string, page, limit int) ([]models.User, int, error) {
 	queryCtx, cancel := context.WithTimeout(ctx, AuthQueryTimeout)
 	defer cancel()
 
-	query := `SELECT id, organization_id, email, password_hash, role, created_at, updated_at 
-	          FROM users WHERE organization_id = $1 ORDER BY created_at ASC`
-	rows, err := r.pool.Query(queryCtx, query, orgID)
+	var total int
+	countQuery := `SELECT COUNT(*) FROM users WHERE organization_id = $1`
+	if err := r.pool.QueryRow(queryCtx, countQuery, orgID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed counting users: %w", err)
+	}
+
+	var rows pgx.Rows
+	var err error
+
+	if limit > 0 && page > 0 {
+		offset := (page - 1) * limit
+		query := `SELECT id, organization_id, email, name, password_hash, role, created_at, updated_at 
+		          FROM users WHERE organization_id = $1 ORDER BY created_at ASC 
+		          LIMIT $2 OFFSET $3`
+		rows, err = r.pool.Query(queryCtx, query, orgID, limit, offset)
+	} else {
+		query := `SELECT id, organization_id, email, name, password_hash, role, created_at, updated_at 
+		          FROM users WHERE organization_id = $1 ORDER BY created_at ASC`
+		rows, err = r.pool.Query(queryCtx, query, orgID)
+	}
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
 	users := make([]models.User, 0)
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.OrganizationID, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt, &u.UpdatedAt); err != nil {
-			return nil, err
+		if err := rows.Scan(&u.ID, &u.OrganizationID, &u.Email, &u.Name, &u.PasswordHash, &u.Role, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			return nil, 0, err
 		}
 		users = append(users, u)
 	}
-	return users, rows.Err()
+	return users, total, rows.Err()
+}
+
+// UpdateUserProfile modifies user profile attributes (name, email).
+func (r *AuthRepository) UpdateUserProfile(ctx context.Context, userID, name, email string) (*models.User, error) {
+	queryCtx, cancel := context.WithTimeout(ctx, AuthQueryTimeout)
+	defer cancel()
+
+	now := time.Now().UTC()
+	query := `UPDATE users SET name = $1, email = $2, updated_at = $3 
+	          WHERE id = $4 
+	          RETURNING id, organization_id, email, name, password_hash, role, created_at, updated_at`
+	var user models.User
+	err := r.pool.QueryRow(queryCtx, query, name, email, now, userID).Scan(
+		&user.ID, &user.OrganizationID, &user.Email, &user.Name, &user.PasswordHash, &user.Role, &user.CreatedAt, &user.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// UpdateUserPassword updates the hashed password for a user.
+func (r *AuthRepository) UpdateUserPassword(ctx context.Context, userID, passwordHash string) error {
+	queryCtx, cancel := context.WithTimeout(ctx, AuthQueryTimeout)
+	defer cancel()
+
+	now := time.Now().UTC()
+	query := `UPDATE users SET password_hash = $1, updated_at = $2 WHERE id = $3`
+	_, err := r.pool.Exec(queryCtx, query, passwordHash, now, userID)
+	return err
 }
 
 // UpdateUserRole updates the role for a user within an organization.

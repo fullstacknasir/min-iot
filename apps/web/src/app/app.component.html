@@ -1,99 +1,480 @@
-<div class="flex min-h-screen flex-col bg-slate-950 text-slate-100 font-sans">
-  <!-- Global Navigation Header (Shown when authenticated) -->
-  <header *ngIf="authService.isAuthenticated()" class="sticky top-0 z-40 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md">
-    <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-      <!-- Brand & Links -->
-      <div class="flex items-center gap-8">
-        <a routerLink="/devices" class="flex items-center gap-2.5 transition-opacity hover:opacity-90">
+<!-- Authenticated App Shell Layout -->
+<div *ngIf="authService.isAuthenticated()" class="flex min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans transition-colors duration-150">
+  <!-- Desktop Left Sidebar -->
+  <aside
+    class="hidden md:flex flex-col border-r border-slate-200 bg-white dark:border-slate-800/80 dark:bg-slate-900 transition-all duration-200 select-none z-20"
+    [class.w-64]="!isSidebarCollapsed()"
+    [class.w-20]="isSidebarCollapsed()"
+  >
+    <!-- Sidebar Header / Brand -->
+    <header class="flex h-16 items-center border-b border-slate-200 px-4 dark:border-slate-800/80" [class.justify-between]="!isSidebarCollapsed()" [class.justify-center]="isSidebarCollapsed()">
+      <a routerLink="/devices" class="flex items-center gap-3 overflow-hidden transition-opacity hover:opacity-90">
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 text-white shadow-md shadow-cyan-500/20">
+          <mat-icon class="text-base">sensors</mat-icon>
+        </div>
+        <div *ngIf="!isSidebarCollapsed()" class="truncate">
+          <div class="text-sm font-bold tracking-tight text-slate-900 dark:text-white leading-tight">minIoT</div>
+          <div class="text-[10px] font-semibold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Operations</div>
+        </div>
+      </a>
+    </header>
+
+    <!-- Sidebar Navigation Links -->
+    <nav class="flex-1 space-y-1.5 p-3 overflow-y-auto">
+      <!-- Device Fleet -->
+      <a
+        routerLink="/devices"
+        routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+        [routerLinkActiveOptions]="{ exact: true }"
+        [title]="isSidebarCollapsed() ? 'Device Fleet' : ''"
+        class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-white"
+        [class.justify-center]="isSidebarCollapsed()"
+      >
+        <mat-icon class="text-sm">devices</mat-icon>
+        <span *ngIf="!isSidebarCollapsed()" class="truncate">Device Fleet</span>
+      </a>
+
+      <!-- Dashboards Canvas -->
+      <a
+        routerLink="/dashboards"
+        routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+        [title]="isSidebarCollapsed() ? 'Dashboards' : ''"
+        class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-white"
+        [class.justify-center]="isSidebarCollapsed()"
+      >
+        <mat-icon class="text-sm text-cyan-500">dashboard_customize</mat-icon>
+        <span *ngIf="!isSidebarCollapsed()" class="truncate">Dashboards</span>
+      </a>
+
+      <!-- ThingsBoard Widget Studio -->
+      <a
+        routerLink="/widgets"
+        routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+        [title]="isSidebarCollapsed() ? 'Widget Studio' : ''"
+        class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-white"
+        [class.justify-center]="isSidebarCollapsed()"
+      >
+        <mat-icon class="text-sm text-cyan-500">code</mat-icon>
+        <span *ngIf="!isSidebarCollapsed()" class="truncate">Widget Studio</span>
+      </a>
+
+      <!-- Alerts System -->
+      <a
+        routerLink="/alerts"
+        routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+        [title]="isSidebarCollapsed() ? 'Alerts' : ''"
+        class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-white"
+        [class.justify-center]="isSidebarCollapsed()"
+      >
+        <mat-icon class="text-sm text-red-500">warning</mat-icon>
+        <span *ngIf="!isSidebarCollapsed()" class="truncate">Alerts</span>
+        <span
+          *ngIf="!isSidebarCollapsed() && unreadCount() > 0"
+          class="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white"
+        >
+          {{ unreadCount() > 99 ? '99+' : unreadCount() }}
+        </span>
+      </a>
+
+      <!-- Rule Engine -->
+      <a
+        routerLink="/rules"
+        routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+        [title]="isSidebarCollapsed() ? 'Rule Engine' : ''"
+        class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-white"
+        [class.justify-center]="isSidebarCollapsed()"
+      >
+        <mat-icon class="text-sm text-cyan-500">rule</mat-icon>
+        <span *ngIf="!isSidebarCollapsed()" class="truncate">Rule Engine</span>
+      </a>
+
+      <!-- Admin Devices -->
+      <a
+        *ngIf="authService.isOperatorOrAdmin()"
+        routerLink="/admin/devices"
+        routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+        [title]="isSidebarCollapsed() ? 'Admin Devices' : ''"
+        class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-white"
+        [class.justify-center]="isSidebarCollapsed()"
+      >
+        <mat-icon class="text-sm">settings_suggest</mat-icon>
+        <span *ngIf="!isSidebarCollapsed()" class="truncate">Admin Devices</span>
+      </a>
+
+      <!-- Admin Users -->
+      <a
+        *ngIf="authService.isAdmin()"
+        routerLink="/admin/users"
+        routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+        [title]="isSidebarCollapsed() ? 'Admin Users' : ''"
+        class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-white"
+        [class.justify-center]="isSidebarCollapsed()"
+      >
+        <mat-icon class="text-sm">manage_accounts</mat-icon>
+        <span *ngIf="!isSidebarCollapsed()" class="truncate">Admin Users</span>
+      </a>
+
+      <!-- Profile -->
+      <a
+        routerLink="/profile"
+        routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+        [title]="isSidebarCollapsed() ? 'Profile' : ''"
+        class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-white"
+        [class.justify-center]="isSidebarCollapsed()"
+      >
+        <mat-icon class="text-sm">account_circle</mat-icon>
+        <span *ngIf="!isSidebarCollapsed()" class="truncate">My Profile</span>
+      </a>
+    </nav>
+
+    <!-- Sidebar Footer / Collapse Toggle -->
+    <footer class="border-t border-slate-200 p-3 dark:border-slate-800/80">
+      <button
+        type="button"
+        (click)="toggleSidebar()"
+        [title]="isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
+        class="flex w-full items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-2 text-xs text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+        [class.justify-center]="isSidebarCollapsed()"
+      >
+        <mat-icon class="text-sm">{{ isSidebarCollapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
+        <span *ngIf="!isSidebarCollapsed()" class="truncate font-medium">Collapse</span>
+      </button>
+    </footer>
+  </aside>
+
+  <!-- Mobile Sidebar Drawer (Small screens) -->
+  <div *ngIf="isMobileSidebarOpen()" class="fixed inset-0 z-50 flex md:hidden">
+    <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" (click)="closeMobileSidebar()"></div>
+    <div class="relative flex w-64 flex-col bg-white p-4 shadow-2xl dark:bg-slate-900">
+      <header class="flex items-center justify-between border-b border-slate-200 pb-3 dark:border-slate-800">
+        <div class="flex items-center gap-2.5">
           <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 text-white shadow-md shadow-cyan-500/20">
             <mat-icon class="text-sm">sensors</mat-icon>
           </div>
           <div>
-            <div class="text-sm font-bold tracking-tight text-white leading-none">minIoT</div>
-            <div class="text-[10px] font-medium uppercase tracking-wider text-cyan-400">Operations</div>
+            <div class="text-sm font-bold text-slate-900 dark:text-white">minIoT</div>
+            <div class="text-[10px] font-semibold text-cyan-600 dark:text-cyan-400">Operations</div>
           </div>
+        </div>
+        <button type="button" (click)="closeMobileSidebar()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+          <mat-icon>close</mat-icon>
+        </button>
+      </header>
+
+      <nav class="mt-4 flex-1 space-y-1">
+        <a
+          routerLink="/devices"
+          (click)="closeMobileSidebar()"
+          routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 dark:text-slate-300"
+        >
+          <mat-icon class="text-sm">devices</mat-icon>
+          <span>Device Fleet</span>
         </a>
 
-        <nav class="hidden md:flex items-center gap-1 text-xs font-semibold">
-          <a
-            routerLink="/devices"
-            routerLinkActive="bg-slate-800 text-cyan-400"
-            [routerLinkActiveOptions]="{ exact: true }"
-            class="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
-          >
-            <mat-icon class="text-xs">devices</mat-icon>
-            <span>Device Fleet</span>
-          </a>
+        <a
+          routerLink="/dashboards"
+          (click)="closeMobileSidebar()"
+          routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 dark:text-slate-300"
+        >
+          <mat-icon class="text-sm text-cyan-500">dashboard_customize</mat-icon>
+          <span>Dashboards</span>
+        </a>
 
-          <a
-            *ngIf="authService.isOperatorOrAdmin()"
-            routerLink="/admin/devices"
-            routerLinkActive="bg-slate-800 text-cyan-400"
-            class="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
-          >
-            <mat-icon class="text-xs">settings_suggest</mat-icon>
-            <span>Admin Devices</span>
-          </a>
+        <a
+          routerLink="/widgets"
+          (click)="closeMobileSidebar()"
+          routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 dark:text-slate-300"
+        >
+          <mat-icon class="text-sm text-cyan-500">code</mat-icon>
+          <span>Widget Studio</span>
+        </a>
 
-          <a
-            *ngIf="authService.isAdmin()"
-            routerLink="/admin/users"
-            routerLinkActive="bg-slate-800 text-cyan-400"
-            class="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
-          >
-            <mat-icon class="text-xs">manage_accounts</mat-icon>
-            <span>Admin Users</span>
-          </a>
-        </nav>
-      </div>
+        <a
+          routerLink="/alerts"
+          (click)="closeMobileSidebar()"
+          routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 dark:text-slate-300"
+        >
+          <mat-icon class="text-sm text-red-500">warning</mat-icon>
+          <span>Alerts</span>
+        </a>
 
-      <!-- User & Org Controls -->
+        <a
+          routerLink="/rules"
+          (click)="closeMobileSidebar()"
+          routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 dark:text-slate-300"
+        >
+          <mat-icon class="text-sm text-cyan-500">rule</mat-icon>
+          <span>Rule Engine</span>
+        </a>
+
+        <a
+          *ngIf="authService.isOperatorOrAdmin()"
+          routerLink="/admin/devices"
+          (click)="closeMobileSidebar()"
+          routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 dark:text-slate-300"
+        >
+          <mat-icon class="text-sm">settings_suggest</mat-icon>
+          <span>Admin Devices</span>
+        </a>
+
+        <a
+          *ngIf="authService.isAdmin()"
+          routerLink="/admin/users"
+          (click)="closeMobileSidebar()"
+          routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 dark:text-slate-300"
+        >
+          <mat-icon class="text-sm">manage_accounts</mat-icon>
+          <span>Admin Users</span>
+        </a>
+
+        <a
+          routerLink="/profile"
+          (click)="closeMobileSidebar()"
+          routerLinkActive="bg-cyan-50 text-cyan-700 font-semibold dark:bg-slate-800 dark:text-cyan-400"
+          class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs text-slate-600 dark:text-slate-300"
+        >
+          <mat-icon class="text-sm">account_circle</mat-icon>
+          <span>My Profile</span>
+        </a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Right Content Container -->
+  <div class="flex flex-1 flex-col min-w-0 overflow-hidden">
+    <!-- Top Toolbar -->
+    <header class="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/90 sm:px-6">
+      <!-- Toolbar Left: Mobile hamburger & System status pill -->
       <div class="flex items-center gap-3">
-        <!-- Org badge -->
-        <div *ngIf="authService.currentOrg()" class="hidden sm:flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-800/60 px-3 py-1.5 text-xs text-slate-300">
-          <mat-icon class="text-xs text-slate-400">domain</mat-icon>
-          <span class="font-medium text-slate-200">{{ authService.currentOrg()?.name }}</span>
-        </div>
-
-        <!-- User role pill -->
-        <div class="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-3 py-1.5">
-          <div class="flex h-6 w-6 items-center justify-center rounded-lg bg-cyan-500/10 text-xs font-bold text-cyan-400">
-            {{ (authService.currentUser()?.email || 'U').substring(0, 1).toUpperCase() }}
-          </div>
-          <div class="hidden sm:block text-left text-xs">
-            <div class="font-medium text-white truncate max-w-[130px]">{{ authService.currentUser()?.email }}</div>
-            <div class="text-[10px] uppercase font-semibold text-cyan-400">{{ authService.currentUser()?.role }}</div>
-          </div>
-        </div>
-
-        <!-- Logout button -->
         <button
           type="button"
-          (click)="handleLogout()"
-          title="Sign Out"
-          class="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 text-slate-400 transition-colors hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-400"
+          (click)="toggleMobileSidebar()"
+          title="Open Navigation"
+          class="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 md:hidden"
         >
-          <mat-icon class="text-sm">logout</mat-icon>
+          <mat-icon class="text-sm">menu</mat-icon>
         </button>
+
+        <div class="hidden sm:flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-100/70 px-3 py-1 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
+          <span class="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="font-medium text-slate-800 dark:text-slate-300">minIoT Operations</span>
+        </div>
       </div>
-    </div>
-  </header>
 
-  <!-- Main View Area -->
-  <main class="flex-1">
-    <div [class]="authService.isAuthenticated() ? 'mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8' : ''">
-      <router-outlet></router-outlet>
-    </div>
+      <!-- Toolbar Right: Org Badge + Notification Center + Theme Toggle + User Info Dropdown -->
+      <div class="flex items-center gap-2.5">
+        <!-- Organization Pill -->
+        <div *ngIf="authService.currentOrg()" class="hidden lg:flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100/70 px-3 py-1.5 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
+          <mat-icon class="text-xs text-slate-400">domain</mat-icon>
+          <span class="font-medium text-slate-800 dark:text-slate-200">{{ authService.currentOrg()?.name }}</span>
+        </div>
+
+        <!-- Notification Bell Dropdown Trigger & Panel -->
+        <div class="relative">
+          <button
+            id="notification-trigger"
+            type="button"
+            (click)="toggleNotificationMenu($event)"
+            title="Notifications"
+            class="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-100 hover:text-cyan-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-cyan-400"
+          >
+            <mat-icon class="text-sm">notifications</mat-icon>
+            <span
+              *ngIf="unreadCount() > 0"
+              class="absolute -top-1 -right-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow-xs"
+            >
+              {{ unreadCount() > 99 ? '99+' : unreadCount() }}
+            </span>
+          </button>
+
+          <!-- Notification Dropdown Panel -->
+          <div
+            *ngIf="isNotificationMenuOpen()"
+            id="notification-dropdown"
+            class="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-slate-200 bg-white shadow-2xl z-50 dark:border-slate-800 dark:bg-slate-900 backdrop-blur"
+          >
+            <!-- Dropdown Header -->
+            <header class="flex items-center justify-between border-b border-slate-100 p-3.5 dark:border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-900 dark:text-white">Notifications</span>
+                <span *ngIf="unreadCount() > 0" class="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
+                  {{ unreadCount() }} unread
+                </span>
+              </div>
+              <button
+                *ngIf="unreadCount() > 0"
+                type="button"
+                (click)="markAllNotificationsAsRead()"
+                class="text-[11px] font-medium text-cyan-600 hover:underline dark:text-cyan-400"
+              >
+                Mark all read
+              </button>
+            </header>
+
+            <!-- Notifications List -->
+            <div class="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
+              <div *ngIf="recentNotifications().length === 0" class="py-8 text-center text-xs text-slate-400 dark:text-slate-500">
+                <mat-icon class="text-3xl text-slate-300 dark:text-slate-600">notifications_none</mat-icon>
+                <div class="mt-1 font-medium">No notifications yet</div>
+              </div>
+
+              <div
+                *ngFor="let item of recentNotifications()"
+                (click)="markNotificationAsRead(item, $event)"
+                class="flex cursor-pointer items-start gap-3 p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                [class.bg-cyan-50/30]="!item.read"
+                [class.dark:bg-cyan-950/20]="!item.read"
+              >
+                <div class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-500">
+                  <mat-icon class="text-xs">warning</mat-icon>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="text-xs font-semibold text-slate-900 dark:text-white truncate">{{ item.title }}</span>
+                    <span *ngIf="!item.read" class="h-2 w-2 shrink-0 rounded-full bg-cyan-500"></span>
+                  </div>
+                  <div class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-tight">{{ item.message }}</div>
+                  <div class="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
+                    {{ item.created_at | momentDate : 'fromNow' }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dropdown Footer -->
+            <footer class="border-t border-slate-100 p-2 text-center dark:border-slate-800">
+              <button
+                type="button"
+                (click)="navigateToAlerts()"
+                class="w-full rounded-xl py-1.5 text-xs font-semibold text-cyan-600 transition hover:bg-cyan-50 dark:text-cyan-400 dark:hover:bg-cyan-950/40"
+              >
+                View all in Alerts
+              </button>
+            </footer>
+          </div>
+        </div>
+
+        <!-- Theme Toggle Button (Placed before logged in user shows!) -->
+        <button
+          type="button"
+          (click)="toggleTheme()"
+          [title]="themeService.isDarkMode() ? 'Switch to Light Theme' : 'Switch to Dark Theme'"
+          class="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-100 hover:text-cyan-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-cyan-400"
+        >
+          <mat-icon class="text-sm">
+            {{ themeService.isDarkMode() ? 'light_mode' : 'dark_mode' }}
+          </mat-icon>
+        </button>
+
+        <!-- Clickable User Info Dropdown Trigger & Menu -->
+        <div class="relative">
+          <button
+            id="user-menu-trigger"
+            type="button"
+            (click)="toggleUserMenu($event)"
+            title="User Profile Menu"
+            class="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-left shadow-sm transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700"
+          >
+            <!-- User Avatar Circle -->
+            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 text-xs font-bold text-white shadow-sm">
+              {{ (authService.currentUser()?.name || authService.currentUser()?.email || 'U').substring(0, 1).toUpperCase() }}
+            </div>
+
+            <!-- Name / Email & Role Pill (Hidden on tiny screens) -->
+            <div class="hidden sm:block text-xs leading-none">
+              <div class="font-medium text-slate-900 dark:text-white truncate max-w-[120px]">
+                {{ authService.currentUser()?.name || authService.currentUser()?.email }}
+              </div>
+              <div class="mt-0.5 text-[10px] font-semibold uppercase text-cyan-600 dark:text-cyan-400">
+                {{ authService.currentUser()?.role }}
+              </div>
+            </div>
+
+            <!-- Dropdown Arrow -->
+            <mat-icon class="text-xs text-slate-400 transition-transform" [class.rotate-180]="isUserMenuOpen()">
+              expand_more
+            </mat-icon>
+          </button>
+
+          <!-- Dropdown Submenu (Profile, Logout) -->
+          <div
+            *ngIf="isUserMenuOpen()"
+            id="user-menu-dropdown"
+            class="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl z-50 dark:border-slate-800 dark:bg-slate-900 backdrop-blur"
+          >
+            <!-- Submenu User Summary Header -->
+            <div class="px-3 py-2.5 border-b border-slate-100 dark:border-slate-800">
+              <div class="font-semibold text-xs text-slate-900 dark:text-white truncate">
+                {{ authService.currentUser()?.name || 'User Account' }}
+              </div>
+              <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                {{ authService.currentUser()?.email }}
+              </div>
+              <div class="mt-2 flex items-center justify-between text-[10px]">
+                <span class="rounded bg-cyan-100 dark:bg-cyan-500/10 px-2 py-0.5 font-bold uppercase text-cyan-700 dark:text-cyan-400">
+                  {{ authService.currentUser()?.role }}
+                </span>
+                <span class="text-slate-400 truncate max-w-[120px]">{{ authService.currentOrg()?.name }}</span>
+              </div>
+            </div>
+
+            <!-- Submenu Action Items -->
+            <div class="mt-1.5 space-y-0.5 text-xs">
+              <!-- Profile Submenu Item -->
+              <button
+                type="button"
+                (click)="navigateToProfile()"
+                class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-slate-700 transition-colors hover:bg-slate-100 hover:text-cyan-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-cyan-400"
+              >
+                <mat-icon class="text-xs text-slate-400">person</mat-icon>
+                <span>Profile Settings</span>
+              </button>
+
+              <!-- Sign Out Submenu Item -->
+              <button
+                type="button"
+                (click)="handleLogout()"
+                class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
+              >
+                <mat-icon class="text-xs text-red-500">logout</mat-icon>
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Dynamic View Area -->
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="mx-auto max-w-7xl">
+        <router-outlet></router-outlet>
+      </div>
+    </main>
+
+    <!-- Global App Footer -->
+    <footer class="border-t border-slate-200 bg-white py-3.5 px-6 text-xs text-slate-500 dark:border-slate-800/80 dark:bg-slate-950">
+      <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 sm:flex-row">
+        <span>minIoT Platform &bull; Production IoT Monorepo & Telemetry Dashboard</span>
+        <span class="flex items-center gap-1.5 text-slate-400">
+          <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+          <span>EMQX &bull; TimescaleDB &bull; Redis Online</span>
+        </span>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- Unauthenticated Flow (Login / Auth pages) -->
+<div *ngIf="!authService.isAuthenticated()" class="min-h-screen bg-slate-950 text-slate-100 font-sans">
+  <main>
+    <router-outlet></router-outlet>
   </main>
-
-  <!-- Global Footer -->
-  <footer *ngIf="authService.isAuthenticated()" class="border-t border-slate-800/80 bg-slate-950 py-4 text-center text-xs text-slate-500">
-    <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 sm:flex-row sm:px-6 lg:px-8">
-      <span>minIoT Platform &bull; Production IoT Monorepo & Telemetry Dashboard</span>
-      <span class="flex items-center gap-1.5 text-slate-400">
-        <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
-        <span>All systems operational (EMQX, TimescaleDB, Redis)</span>
-      </span>
-    </div>
-  </footer>
 </div>

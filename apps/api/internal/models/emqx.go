@@ -1,7 +1,5 @@
 package models
 
-import "time"
-
 const (
 	EMQXResultAllow = "allow"
 	EMQXResultDeny  = "deny"
@@ -39,5 +37,5 @@ type EMQXEventPayload struct {
 	ConnectedAt    *int64      `json:"connected_at"`
 	DisconnectedAt *int64      `json:"disconnected_at"`
 	Reason         string      `json:"reason"`
-	Timestamp      *time.Time  `json:"timestamp"`
+	Timestamp      interface{} `json:"timestamp"`
 }

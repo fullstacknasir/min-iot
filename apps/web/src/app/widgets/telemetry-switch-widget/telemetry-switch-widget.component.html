@@ -1,0 +1,73 @@
+<section class="flex flex-col h-full justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-colors dark:border-slate-800 dark:bg-slate-900/80">
+  <!-- Widget Header -->
+  <header class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80">
+    <div class="flex items-center gap-2.5">
+      <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-400">
+        <mat-icon class="text-base">toggle_on</mat-icon>
+      </div>
+      <div>
+        <div class="text-xs font-bold text-slate-900 dark:text-white truncate">
+          {{ title || 'Device Switch Control' }}
+        </div>
+        <div class="text-[10px] text-slate-400 font-mono truncate">
+          {{ deviceId }} &bull; {{ commandName }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Live indicator -->
+    <div class="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold dark:border-slate-800 dark:bg-slate-950">
+      <span class="h-1.5 w-1.5 rounded-full" [class.bg-emerald-500]="isConnected()" [class.bg-slate-400]="!isConnected()"></span>
+      <span class="text-slate-600 dark:text-slate-400">{{ isConnected() ? 'Live' : 'Cached' }}</span>
+    </div>
+  </header>
+
+  <!-- Switch Control Area -->
+  <main class="flex flex-col items-center justify-center py-6">
+    <div class="flex flex-col items-center gap-3">
+      <button
+        type="button"
+        [disabled]="isPending()"
+        (click)="handleToggle()"
+        class="relative inline-flex h-10 w-20 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden disabled:opacity-50"
+        [class.bg-cyan-600]="stateActive()"
+        [class.bg-slate-300]="!stateActive()"
+        [class.dark:bg-slate-700]="!stateActive()"
+        [title]="stateActive() ? 'Click to turn OFF' : 'Click to turn ON'"
+      >
+        <span
+          class="pointer-events-none inline-block h-9 w-9 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center text-slate-600"
+          [class.translate-x-10]="stateActive()"
+          [class.translate-x-0]="!stateActive()"
+        >
+          <mat-icon class="text-xs" [class.text-cyan-600]="stateActive()">power_settings_new</mat-icon>
+        </span>
+      </button>
+
+      <div class="flex items-center gap-2">
+        <span
+          class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider"
+          [class.bg-emerald-500/10]="stateActive()"
+          [class.text-emerald-500]="stateActive()"
+          [class.bg-slate-100]="!stateActive()"
+          [class.text-slate-500]="!stateActive()"
+          [class.dark:bg-slate-800]="!stateActive()"
+        >
+          <span class="h-1.5 w-1.5 rounded-full" [class.bg-emerald-500]="stateActive()" [class.bg-slate-400]="!stateActive()"></span>
+          {{ stateActive() ? 'State: Active (ON)' : 'State: Inactive (OFF)' }}
+        </span>
+      </div>
+
+      <!-- Action Feedback Banner -->
+      <div *ngIf="actionFeedback()" class="text-[11px] font-medium text-cyan-600 dark:text-cyan-400 animate-fade-in">
+        {{ actionFeedback() }}
+      </div>
+    </div>
+  </main>
+
+  <!-- Widget Footer -->
+  <footer class="flex items-center justify-between pt-3 border-t border-slate-100 text-[10px] text-slate-400 dark:border-slate-800/80">
+    <span class="font-medium text-slate-500 dark:text-slate-400">Two-Way RPC Switch</span>
+    <span>Updated: {{ lastReceivedTime() || 'Waiting...' }}</span>
+  </footer>
+</section>

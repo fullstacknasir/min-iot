@@ -14,6 +14,7 @@ import (
 	"miniot/apps/api/internal/middleware"
 	"miniot/apps/api/internal/models"
 	"miniot/apps/api/internal/repository"
+	"miniot/apps/api/internal/rules"
 )
 
 func main() {
@@ -30,6 +31,9 @@ func main() {
 	if dbClients != nil && dbClients.Pool != nil {
 		if err := database.RunMigrations(context.Background(), dbClients.Pool); err != nil {
 			log.Fatalf("[FATAL] Failed executing database migrations: %v", err)
+		}
+		if err := database.AutoSeed(context.Background(), dbClients.Pool); err != nil {
+			log.Printf("[WARN] Failed executing database auto-seed: %v", err)
 		}
 	}
 
@@ -103,10 +107,19 @@ func registerProtectedRoutes(router *gin.Engine, dbClients *database.Clients, cf
 	deviceRepo := repository.NewDeviceRepository(dbClients.Pool)
 	telemetryRepo := repository.NewTelemetryRepository(dbClients.Pool, dbClients.Redis)
 	authRepo := repository.NewAuthRepository(dbClients.Pool)
+	ruleAlertRepo := repository.NewRuleAlertRepository(dbClients.Pool)
+	dashboardRepo := repository.NewDashboardRepository(dbClients.Pool)
+	customWidgetRepo := repository.NewCustomWidgetRepository(dbClients.Pool)
+
+	ruleEngine := rules.NewRuleEngine(ruleAlertRepo, deviceRepo, dbClients.Redis)
 
 	deviceHandler := handlers.NewDeviceHandler(deviceRepo)
-	telemetryHandler := handlers.NewTelemetryHandler(telemetryRepo)
+	telemetryHandler := handlers.NewTelemetryHandler(telemetryRepo).WithRuleEngine(ruleEngine)
 	userHandler := handlers.NewUserHandler(authRepo)
+	authHandler := handlers.NewAuthHandler(authRepo, cfg)
+	ruleAlertHandler := handlers.NewRuleAlertHandler(ruleAlertRepo, dbClients.Redis)
+	dashboardHandler := handlers.NewDashboardHandler(dashboardRepo)
+	customWidgetHandler := handlers.NewCustomWidgetHandler(customWidgetRepo)
 
 	api := router.Group("/api/v1")
 	if dbClients.Redis != nil {
@@ -114,9 +127,17 @@ func registerProtectedRoutes(router *gin.Engine, dbClients *database.Clients, cf
 	}
 	api.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 
+	api.GET("/auth/me", authHandler.GetProfile)
+	api.PUT("/auth/me", authHandler.UpdateProfile)
+	api.GET("/profile", authHandler.GetProfile)
+	api.PUT("/profile", authHandler.UpdateProfile)
+
 	registerDeviceRoutes(api, deviceHandler)
 	registerTelemetryRoutes(api, telemetryHandler)
 	registerUserRoutes(api, userHandler)
+	registerRuleAlertRoutes(api, ruleAlertHandler)
+	registerDashboardRoutes(api, dashboardHandler)
+	registerCustomWidgetRoutes(api, customWidgetHandler)
 }
 
 func registerUserRoutes(api *gin.RouterGroup, handler *handlers.UserHandler) {
@@ -155,4 +176,61 @@ func registerTelemetryRoutes(api *gin.RouterGroup, handler *handlers.TelemetryHa
 	api.GET("/devices/:id/telemetry/aggregates", handler.GetAggregates)
 	api.GET("/devices/:id/telemetry/live", handler.StreamLiveTelemetry)
 	api.POST("/telemetry", middleware.RequireRole(models.RoleAdmin, models.RoleOperator), handler.IngestTelemetry)
+}
+
+func registerRuleAlertRoutes(api *gin.RouterGroup, handler *handlers.RuleAlertHandler) {
+	api.GET("/rules", handler.ListRules)
+	api.GET("/rules/:id", handler.GetRule)
+
+	ruleManage := api.Group("/rules")
+	ruleManage.Use(middleware.RequireRole(models.RoleAdmin, models.RoleOperator))
+	{
+		ruleManage.POST("", handler.CreateRule)
+		ruleManage.PUT("/:id", handler.UpdateRule)
+		ruleManage.DELETE("/:id", handler.DeleteRule)
+		ruleManage.PATCH("/:id/toggle", handler.ToggleRule)
+	}
+
+	api.GET("/alerts", handler.ListAlerts)
+	api.GET("/alerts/:id", handler.GetAlert)
+
+	alertManage := api.Group("/alerts")
+	alertManage.Use(middleware.RequireRole(models.RoleAdmin, models.RoleOperator))
+	{
+		alertManage.POST("/:id/acknowledge", handler.AcknowledgeAlert)
+		alertManage.POST("/:id/resolve", handler.ResolveAlert)
+	}
+
+	api.GET("/notifications", handler.ListNotifications)
+	api.GET("/notifications/unread-count", handler.GetUnreadCount)
+	api.PATCH("/notifications/:id/read", handler.MarkAsRead)
+	api.POST("/notifications/read-all", handler.MarkAllAsRead)
+	api.GET("/notifications/live", handler.StreamLiveNotifications)
+}
+
+func registerDashboardRoutes(api *gin.RouterGroup, handler *handlers.DashboardHandler) {
+	api.GET("/dashboards", handler.ListDashboards)
+	api.GET("/dashboards/:id", handler.GetDashboard)
+
+	manage := api.Group("/dashboards")
+	manage.Use(middleware.RequireRole(models.RoleAdmin, models.RoleOperator))
+	{
+		manage.POST("", handler.CreateDashboard)
+		manage.PUT("/:id", handler.UpdateDashboard)
+		manage.DELETE("/:id", handler.DeleteDashboard)
+		manage.POST("/:id/default", handler.SetDefault)
+	}
+}
+
+func registerCustomWidgetRoutes(api *gin.RouterGroup, handler *handlers.CustomWidgetHandler) {
+	api.GET("/custom-widgets", handler.ListCustomWidgets)
+	api.GET("/custom-widgets/:id", handler.GetCustomWidget)
+
+	manage := api.Group("/custom-widgets")
+	manage.Use(middleware.RequireRole(models.RoleAdmin, models.RoleOperator))
+	{
+		manage.POST("", handler.CreateCustomWidget)
+		manage.PUT("/:id", handler.UpdateCustomWidget)
+		manage.DELETE("/:id", handler.DeleteCustomWidget)
+	}
 }

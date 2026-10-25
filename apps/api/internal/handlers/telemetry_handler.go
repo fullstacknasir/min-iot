@@ -12,6 +12,7 @@ import (
 	"miniot/apps/api/internal/middleware"
 	"miniot/apps/api/internal/models"
 	"miniot/apps/api/internal/repository"
+	"miniot/apps/api/internal/rules"
 )
 
 const (
@@ -21,11 +22,17 @@ const (
 )
 
 type TelemetryHandler struct {
-	repo *repository.TelemetryRepository
+	repo       *repository.TelemetryRepository
+	ruleEngine *rules.RuleEngine
 }
 
 func NewTelemetryHandler(repo *repository.TelemetryRepository) *TelemetryHandler {
 	return &TelemetryHandler{repo: repo}
+}
+
+func (h *TelemetryHandler) WithRuleEngine(engine *rules.RuleEngine) *TelemetryHandler {
+	h.ruleEngine = engine
+	return h
 }
 
 // GetLatestTelemetry returns the real-time cached telemetry for a device scoped to caller's org.
@@ -182,6 +189,10 @@ func (h *TelemetryHandler) IngestTelemetry(c *gin.Context) {
 	if err := h.repo.SaveBatch(c.Request.Context(), req.DeviceID, orgID, timestamp, req.Metrics); err != nil {
 		handleRepositoryError(c, err)
 		return
+	}
+
+	if h.ruleEngine != nil {
+		_ = h.ruleEngine.EvaluateBatch(c.Request.Context(), orgID, req.DeviceID, req.Metrics, timestamp)
 	}
 
 	c.JSON(http.StatusAccepted, gin.H{"status": "ingested", "device_id": req.DeviceID})
